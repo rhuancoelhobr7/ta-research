@@ -70,6 +70,34 @@ de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 - Única hipótese registrada p/ v2: sinal de preço das primeiras horas como
   confirmação intraday (exigiria v2 + Fase B reiniciada).
 
+## 2026-07-04 — Estudo v2: lentes calibradas + leitura MTF fiel (a9/a10)
+
+Motivação: no v1, w_mid=64 no H1 = janela de 2,7 dias — lente multi-dia
+para um fenômeno de 12h. O v2 testou (H1v2) lentes intraday recalibradas
+e (H2v2) os cenários formais do Protocolo (agora em `PROTOCOLO.md`).
+
+- Etapa 0: D1 re-exportado com 7 anos → MN habilitado em modo reduzido
+  (w=24 meses). `PROTOCOLO.md` criado (5 condições FP/FN/FR/EX/N + 3
+  cenários formais — o A5 v1 só tinha aproximações).
+- Etapa 1: `calibrate_gates` no engine — gates de |t| calibrados por lente
+  em random walks (5%/20% de excedência); lentes curtas têm cauda mais
+  pesada (w=16 pede gate 2,90 vs 2,13 no w=64). FP verificado 4,9-5,1%.
+- Etapa 2: `a9_mtf_matrix.py` — 12.640 linhas (395 dias research × 8
+  moedas × 4 lentes), condições em MN/W1/D1/H4/H1/M30 em T0 e T0+4h,
+  realizado 4h + alvo bruto [T0+4h,T0+12h] separado; 2 testes de lookahead.
+- Etapa 3: `a10_v2_study.py`, critérios PRÉ-REGISTRADOS no topo do REPORT.
+  **Tarefa 1 (T0 prevê o rótulo): NULA** — cenários A/B/C estruturalmente
+  vazios (o tier macro mecanizado com FP controlado é ~100% Neutro: MN 100%
+  N, W1 0,3% FP — achado, não bug); `alin` 14-15% top-1 < persistência
+  15,9% < p95 permutado 18,2%; ML teto AUC ~0,5 em todas as lentes.
+  **Tarefa 2 (Tokyo-confirma disjunto): NULA** — momentum das 4h não
+  continua em [T0+4h,T0+12h] (validação −0,3 bp, IC [−3,4, +2,9]); a
+  reversão também não paga. A lição do A8 fechou: o align_4h de 89% era o
+  próprio movimento do dia, sem continuação explorável.
+- Conclusão do v2: NÃO era (só) a lente. Fração ativa em T0 sobe de ~4%
+  para ~5-8% com lentes curtas, mas segue sem separar os dias. O sinal,
+  se existe, não está no preço passado em T0 nem em T0+4h.
+
 ## Pendente
 
 - `a7_final_test.py` (holdout, últimos ~20% dos dias): NÃO executado. Roda

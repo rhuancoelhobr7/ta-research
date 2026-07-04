@@ -288,6 +288,54 @@ def compute_all(indices: pd.DataFrame,
 
 
 # ----------------------------------------------------------------------------
+# 3b. Calibração de gates por lente (estudo v2)
+# ----------------------------------------------------------------------------
+
+def calibrate_gates(w_mid: int, w_fast: int | None = None, n_walks: int = 40,
+                    bars: int = 20000, target_fp: float = 0.05,
+                    seed: int = 0) -> float:
+    """Gate g tal que P(|t| >= g) ~= target_fp em random walks puros.
+
+    O TStat com w pequeno tem cauda mais pesada: um gate fixo (2.0) muda a
+    taxa de falso positivo conforme a lente. Este utilitário mede, em
+    `n_walks` random walks de `bars` barras (seeds determinísticos a partir
+    de `seed`), a taxa de excedência de |t| e devolve por bisseção o gate
+    calibrado para o `w_mid` pedido. Usos: t_gate (target_fp=0.05) e t_low
+    (target_fp=0.20). `w_fast` é aceito por simetria de API (o t não o usa).
+    """
+    rng = np.random.default_rng(seed)
+    pool = []
+    for _ in range(n_walks):
+        x = np.cumsum(rng.normal(0.0, 1.0, bars))
+        t = tstat_nw(x, w_mid)
+        t = t[~np.isnan(t)]
+        pool.append(np.abs(t))
+    pool = np.concatenate(pool)
+
+    lo, hi = 0.0, float(pool.max())
+    for _ in range(60):                      # bisseção na excedência empírica
+        mid = 0.5 * (lo + hi)
+        if (pool >= mid).mean() > target_fp:
+            lo = mid
+        else:
+            hi = mid
+    return 0.5 * (lo + hi)
+
+
+def lens_params(w_mid: int, n_walks: int = 40, bars: int = 20000,
+                seed: int = 0) -> CssmParams:
+    """CssmParams de uma lente intraday: w_fast=max(4,w//4), z_win=min(500,
+    8w) e gates calibrados (5% / 20%) para o w_mid pedido."""
+    return CssmParams(
+        w_fast=max(4, w_mid // 4), w_mid=w_mid,
+        z_win=min(500, w_mid * 8),
+        t_gate=calibrate_gates(w_mid, n_walks=n_walks, bars=bars,
+                               target_fp=0.05, seed=seed),
+        t_low=calibrate_gates(w_mid, n_walks=n_walks, bars=bars,
+                              target_fp=0.20, seed=seed))
+
+
+# ----------------------------------------------------------------------------
 # 4. Utilitários de pesquisa
 # ----------------------------------------------------------------------------
 
