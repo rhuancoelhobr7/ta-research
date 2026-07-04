@@ -1,0 +1,15 @@
+{
+  "n_perm": 200,
+  "perm_block": 5,
+  "cv_gap": 5,
+  "survivors": [],
+  "baseline_top1": {
+    "baseline_continuacao_D1": 0.1291139240506329,
+    "baseline_persistencia": 0.1446700507614213
+  },
+  "random_top1": 0.1240506329113924,
+  "ml_auc": {
+    "logistic": 0.4865190268745289,
+    "gboost_raso": 0.48049361717420974
+  }
+}
