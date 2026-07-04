@@ -1,0 +1,12 @@
+# caches
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# config local do Claude Code (por usuário)
+.claude/
+
+# dados brutos do MT5: grandes e específicos da corretora de cada um —
+# cada usuário exporta os seus via s0_export_mt5.py (contrato no CLAUDE.md).
+# data/raw/_meta.json É versionado (registro do fuso verificado).
+data/raw/*.parquet

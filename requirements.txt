@@ -1,0 +1,8 @@
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+pyarrow>=14.0
+pytest>=8.0
+scikit-learn>=1.4
+# Somente Windows + terminal MT5 (fase 0):
+# MetaTrader5>=5.0.45
