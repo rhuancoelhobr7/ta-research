@@ -62,3 +62,25 @@ completa em `PLAN.md` — leia antes de qualquer fase.
 - Séries cronológicas; janelas para trás; funções puras; CLI fino por script;
   cada rodada grava `results/{timestamp}_{fase}/` com params.json + REPORT.md.
 - Novos cálculos estatísticos ganham teste em `tests/` antes do uso.
+
+## Fluxo de alterações (git) — OBRIGATÓRIO para IAs e humanos
+
+Este repositório vive no GitHub (`origin` = github.com/rhuancoelhobr7/
+ta-research) e é compartilhado: toda modificação DEVE ser registrada no git.
+
+1. **Nunca trabalhe sem commitar**: mudança feita = commit feito. Nada de
+   deixar alterações soltas na working tree ao terminar uma tarefa.
+2. **Branch + Pull Request** para qualquer mudança de código ou metodologia
+   (`git checkout -b <tema>` → commits → `git push -u origin <tema>` →
+   `gh pr create`). Push direto no `main` só para correções triviais de
+   documentação, e ainda assim commitado e pushado.
+3. **`pytest -q` verde ANTES de cada commit** — se quebrar, o commit não
+   acontece.
+4. **Mensagens de commit explicam o PORQUÊ** (o método, não só o código);
+   decisões metodológicas também entram no `CHANGELOG.md` no mesmo commit.
+5. **Puxe antes de mexer** (`git pull --rebase origin main`): outras pessoas
+   (e outras IAs) trabalham no mesmo repositório.
+6. As regras duras acima continuam valendo dentro do git: PR que toque
+   holdout (a7, `--include-holdout`), definição v1 congelada ou
+   `specialist_calls.csv` não deve ser aberto sem ordem explícita do dono
+   do repositório (rhuancoelhobr7).

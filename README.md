@@ -53,6 +53,9 @@ Sequência canônica: `s0 → a1 → a2 → freeze → a3 → a4 → a5 → a6` 
 
 ## Regras para quem for mexer (inclusive IAs)
 
+- **Toda alteração vai para o git** — branch + commit + push, de preferência
+  via Pull Request. O fluxo completo (obrigatório) está no CLAUDE.md, seção
+  "Fluxo de alterações (git)". Mudança sem commit não existe.
 - `pytest -q` sempre verde; novos cálculos estatísticos ganham teste antes.
 - NUNCA chamar `splits_days.holdout_days` fora de `a7_final_test.py`.
 - NUNCA mudar a definição de rótulo dentro da v1 — mudança = v2, Fase B do
