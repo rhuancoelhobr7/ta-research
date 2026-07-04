@@ -1,0 +1,42 @@
+{
+  "lenses": {
+    "16": {
+      "w_fast": 4,
+      "z_win": 128,
+      "t_gate": 2.896,
+      "t_low": 1.692
+    },
+    "24": {
+      "w_fast": 6,
+      "z_win": 192,
+      "t_gate": 2.511,
+      "t_low": 1.527
+    },
+    "32": {
+      "w_fast": 8,
+      "z_win": 256,
+      "t_gate": 2.35,
+      "t_low": 1.46
+    },
+    "48": {
+      "w_fast": 12,
+      "z_win": 384,
+      "t_gate": 2.205,
+      "t_low": 1.397
+    }
+  },
+  "fr_age": 40,
+  "w_w1": 64,
+  "w_mn": 24,
+  "gate_w1": 2.134,
+  "gate_mn": 2.511,
+  "mn_disponivel": true,
+  "n_barras_mensais": 85,
+  "modo_reduzido": "W1/MN: FP/FR/N apenas (FN/EX indispon\u00edveis)",
+  "n_rows": 12640,
+  "n_days": 395,
+  "periodo": [
+    "2024-08-02",
+    "2026-02-16"
+  ]
+}
