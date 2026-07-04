@@ -1,0 +1,22 @@
+{
+  "n_days": 126,
+  "include_holdout": false,
+  "boot_block": 5,
+  "period": [
+    "2025-08-19",
+    "2026-02-16"
+  ],
+  "n_rows": 1008,
+  "labels_meta": {
+    "version": "v1",
+    "frozen": true,
+    "t0_hour": 0.0,
+    "window_hours": 12.0,
+    "breadth_min": 0.8571428571,
+    "z_min": 0.8,
+    "er_min": 0.12,
+    "vol_lookback": 63,
+    "n_days": 494,
+    "n_labels": 976
+  }
+}
