@@ -1,0 +1,44 @@
+{
+  "t0_hour": 0.0,
+  "n_days": 494,
+  "n_rows": 3952,
+  "tfs": {
+    "M30": {
+      "fonte": "m5",
+      "resample": "30min",
+      "modo": "completo",
+      "gate_feature_barras": 150,
+      "cobertura_state_pct": 100.0
+    },
+    "H1": {
+      "fonte": "m5",
+      "resample": "1h",
+      "modo": "completo",
+      "gate_feature_barras": 150,
+      "cobertura_state_pct": 100.0
+    },
+    "H4": {
+      "fonte": "m5",
+      "resample": "4h",
+      "modo": "completo",
+      "gate_feature_barras": 150,
+      "cobertura_state_pct": 96.8
+    },
+    "D1": {
+      "fonte": "d1",
+      "resample": null,
+      "modo": "completo",
+      "gate_feature_barras": 150,
+      "cobertura_state_pct": 100.0
+    },
+    "W1": {
+      "fonte": "d1",
+      "resample": "W-FRI",
+      "modo": "reduzido",
+      "gate_feature_barras": 20,
+      "cobertura_state_pct": 100.0
+    }
+  },
+  "mn": "omitido (PLAN \u00a73)",
+  "labels_version": "v1"
+}
