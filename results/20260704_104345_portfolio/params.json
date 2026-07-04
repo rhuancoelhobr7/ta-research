@@ -1,0 +1,47 @@
+{
+  "costs_bps": {
+    "majors": 1.0,
+    "crosses": 2.0,
+    "exotic": 3.0
+  },
+  "boot_block": 5,
+  "reference_rule": "maior_|M|_D1",
+  "metrics": {
+    "regra_maior_|M|_D1 [NAO sobrevivente]": {
+      "n": 395,
+      "mean_bp": -0.01947643358323839,
+      "lo_bp": -2.4610737138575303,
+      "hi_bp": 2.531266793568488,
+      "win": 0.4860759493670886,
+      "total_pct": -0.07693191265379148,
+      "maxdd_pct": -7.119359921003378
+    },
+    "baseline_continuacao_D1": {
+      "n": 395,
+      "mean_bp": -3.8899451359057333,
+      "lo_bp": -6.782311987214587,
+      "hi_bp": -0.773581441936846,
+      "win": 0.40253164556962023,
+      "total_pct": -15.365283286827644,
+      "maxdd_pct": -19.009290148657904
+    },
+    "baseline_persistencia": {
+      "n": 394,
+      "mean_bp": 0.21758656381154395,
+      "lo_bp": -2.497390983469225,
+      "hi_bp": 2.8871776381459373,
+      "win": 0.5152284263959391,
+      "total_pct": 0.8572910614174809,
+      "maxdd_pct": -7.289407200770853
+    },
+    "teto_oracle [lookahead: s\u00f3 p/ dimensionar custos]": {
+      "n": 346,
+      "mean_bp": 40.80824507218686,
+      "lo_bp": 37.67626600727943,
+      "hi_bp": 44.53540989981091,
+      "win": 1.0,
+      "total_pct": 141.19652794976676,
+      "maxdd_pct": 0.0
+    }
+  }
+}
