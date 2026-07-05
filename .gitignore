@@ -10,3 +10,7 @@ __pycache__/
 # cada usuário exporta os seus via s0_export_mt5.py (contrato no CLAUDE.md).
 # data/raw/_meta.json É versionado (registro do fuso verificado).
 data/raw/*.parquet
+
+# binarios MT5 e logs de compilacao
+*.ex5
+compile*.log
