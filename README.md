@@ -44,12 +44,31 @@ relatórios), então as análises da Fase B podem ser refeitas sem MT5.
 | `a6_portfolio.py` | Fase C: portfólio diário de 7 pares com custos |
 | `a7_final_test.py` | Holdout — stub de propósito; UMA execução, sob ordem |
 | `a8_first4h.py` | Descritivo: rótulos × estados CSSM nas primeiras 4h |
+| `a9_mtf_matrix.py` / `a10_v2_study.py` | Estudo v2: lentes calibradas + MTF fiel (nulo duplo) |
+| `r1_relational.py` / `a11_relational_study.py` | Camada relacional + validação (diagnóstico forte; nowcast/par nulos) |
 | `splits_days.py` | Guardião do split temporal (treino/validação/holdout) |
 | `stats_blocks.py` | Bootstrap em blocos, permutação, purged CV (testados) |
 | `specialist_calls.csv` | As 7 chamadas reais — IMUTÁVEL, âncora de auditoria |
+| `PROTOCOLO.md` | Especificação formal das condições/cenários do especialista |
+| `Cssm.mq5` | **Indicador MT5 de produção** (v1.40, com a camada relacional) |
+| `Export_CSSM_Parity.mq5` | Script de paridade indicador × pesquisa |
+| `INDICATOR_CHANGELOG.md` | Histórico do indicador, mudança a mudança |
 
 Sequência canônica: `s0 → a1 → a2 → freeze → a3 → a4 → a5 → a6` (feita);
+extensões: `a8` (4h), `a9/a10` (v2), `r1/a11` (relacional) — todas rodadas;
 `a7` só sob ordem explícita do dono do repositório.
+
+## O indicador (Cssm.mq5)
+
+O repositório também versiona o indicador MT5 que motivou a pesquisa —
+v1.40 = v1.30 + camada relacional validada pelo a11 (matriz 8×8, breadth,
+marcador ⚠ de força espúria). Para usar: compilar no MetaEditor (0 erros,
+0 warnings) e copiar para `MQL5\Indicators`. Contrato p/ EAs via iCustom:
+buffers 0-7 M | 8-15 estado | 16-23 direção | 24-31 breadth_hard×dir |
+32-39 breadth_soft×dir (shift ≥ 1). **Regras para mexer no .mq5 — inclusive
+IAs — estão no CLAUDE.md ("Regras do indicador")**; histórico em
+`INDICATOR_CHANGELOG.md`. O indicador NÃO gera sinal de entrada — é
+contexto, e a pesquisa deste repo é a razão documentada do porquê.
 
 ## Regras para quem for mexer (inclusive IAs)
 

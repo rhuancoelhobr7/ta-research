@@ -24,6 +24,13 @@ completa em `PLAN.md` — leia antes de qualquer fase.
   (~88% dos dias com >=1 rótulo) mas o CSSM em T0 não o prevê (ML AUC ~0.48;
   nenhuma regra bate baselines + reality check; persistência dia-a-dia nula).
 - `a7_final_test.py` — stub DE PROPÓSITO: holdout, só sob ordem explícita.
+- `r1_relational.py` — camada relacional (motor por par, matriz 8x8,
+  breadth/nowcast, dominância). DESCRITIVA: diagnóstico validado pelo a11
+  (~64% dos instantes ativos do índice são força espúria); como preditor,
+  NULA (concordância 16-28%; seleção de par nula). Não reabre os nulos.
+- `Cssm.mq5` — indicador MT5 de produção, v1.40 (v1.30 + camada relacional
+  portada da pesquisa). Ver "Regras do indicador" abaixo e o
+  `INDICATOR_CHANGELOG.md` (âncoras de linha de cada mudança).
 - Histórico de decisões e resultados: `CHANGELOG.md`.
 
 ## Ambiente e dados
@@ -56,6 +63,36 @@ completa em `PLAN.md` — leia antes de qualquer fase.
 6. **Bootstrap em blocos** p/ ICs; **n<100 eventos** = amostra insuficiente;
    **reality check** com 200 permutações em bloco para rankings de regras.
 7. Relatórios sempre com as métricas do PLAN.md, incluindo resultados nulos.
+
+## Regras do indicador (Cssm.mq5) — valem para QUALQUER mudança no .mq5
+
+1. **Ler o arquivo inteiro e mapear as estruturas antes de editar**
+   (`Compute()`, `StateAt()`, `FillBuffers()`, arrays achatados
+   `serie[moeda*len+k]`, prefixos de objetos `PFX/PPFX/MPFX`). Não confiar
+   de memória.
+2. **Compilar antes de entregar**: MetaEditor CLI —
+   `MetaEditor64.exe /compile:"Cssm.mq5" /log:"log"` — deve dar
+   **0 errors, 0 warnings** (o log sai em UTF-16). O `.ex5` NÃO é
+   versionado (.gitignore).
+3. **Anti-repaint é sagrado**: todo cálculo usa `CopyClose(...,1,W)` (só
+   barras fechadas); a barra em formação (shift 0) recebe só cópia
+   cosmética. Nenhuma feature nova pode ler a barra 0.
+4. **Contrato de buffers p/ EAs é API pública**: 0-7 M | 8-15 estado |
+   16-23 direção | 24-31 breadth_hard*dir | 32-39 breadth_soft*dir, ordem
+   USD,EUR,GBP,JPY,CHF,CAD,AUD,NZD, ler com shift>=1. Mudar índice/semântica
+   de buffer existente = breaking change: só com ordem explícita do dono.
+5. **Matemática = porte fiel**: TStat/EffRatio do .mq5 espelham
+   `cssm_engine.py` (validado por testes). Mudou a matemática num lado,
+   muda no outro E roda `pytest` — paridade via `Export_CSSM_Parity.mq5`.
+6. **Gates por par são calibrados por janela** (random walk, ~5% FP):
+   w=16→2.90 | 24→2.51 | 32→2.35 | 48→2.21 | 64→2.13. Mudou `InpWMid`,
+   ajuste `InpPairGate` pela tabela (fonte: `calibrate_gates` do engine).
+7. **Honestidade no produto**: o indicador NÃO gera sinal de entrada; a
+   camada relacional é LEITURA (diagnóstico/nowcast). Os avisos do
+   cabeçalho e do rodapé do painel não saem; features novas que insinuem
+   previsão precisam de pesquisa antes (e a pesquisa até hoje deu nulo).
+8. Toda mudança no indicador entra no `INDICATOR_CHANGELOG.md` (com
+   âncoras de linha) ALÉM do CHANGELOG.md padrão, no mesmo commit.
 
 ## Convenções
 
