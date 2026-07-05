@@ -98,6 +98,29 @@ e (H2v2) os cenários formais do Protocolo (agora em `PROTOCOLO.md`).
   para ~5-8% com lentes curtas, mas segue sem separar os dias. O sinal,
   se existe, não está no preço passado em T0 nem em T0+4h.
 
+## 2026-07-04 — Camada relacional: validação em dados reais (r1/a11)
+
+`r1_relational.py` (fornecido pelo usuário, com testes sintéticos): motor
+por par, matriz 8×8 orientada, breadth/nowcast rolante, dominância. Camada
+DESCRITIVA — os nulos preditivos (A5/A8/v2) não são reabertos. Validação
+em dias research (a11_relational_study.py):
+
+- **Resultado forte (Etapa 2)**: ~2/3 dos instantes "ativos" do índice
+  agregado (63.6% w=64; 62.4% w=24) NÃO são confirmados pelos pares
+  (breadth_hard < 3/7) — força espúria por contaminação da cesta. CAD é a
+  mais afetada (87%), JPY a menos (30%). Como diagnóstico, a camada se paga.
+- **Limite honesto (Etapas 1/4)**: como "rotulador em tempo real" a camada
+  falha o próprio critério de utilidade — concordância líder×protagonista
+  em T0+12h de só 16% (w=64) / 28% (w=24); a latência nunca converge.
+  Mesmo padrão do v2: janela rolante ≠ janela-calendário do rótulo.
+- **Etapa 3**: as 7 chamadas do especialista caem TODAS no holdout —
+  matrizes desses dias ficam adiadas até ordem explícita (junto com a7);
+  substituídas por 2 dias research de alto nowcast (a linha da líder acende
+  como esperado).
+- **Etapa 5 (única preditiva, critério pré-registrado): NULA** — seleção
+  de par por |M| orientado dá +1.18 bp sobre a média dos 7, IC [-0.65,
+  +3.00] cruza 0, indistinguível de par aleatório (n=394).
+
 ## Pendente
 
 - `a7_final_test.py` (holdout, últimos ~20% dos dias): NÃO executado. Roda
