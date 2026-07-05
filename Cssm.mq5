@@ -1,6 +1,8 @@
 ﻿//+------------------------------------------------------------------+
 //|                                              CSSM_Contexto.mq5   |
-//|  Painel de CONTEXTO por índices sintéticos G8 — v1.30            |
+//|  Painel de CONTEXTO por índices sintéticos G8 — v1.40            |
+//|  + camada relacional (matriz 8x8, breadth, deteccao de forca     |
+//|    espuria)                                                      |
 //|                                                                  |
 //|  v1.10 (usabilidade diária):                                     |
 //|   - Rótulo colorido na ponta de cada linha (moeda + valor M)     |
@@ -13,18 +15,41 @@
 //|   - Estados/direções HISTÓRICOS nos buffers 8-23 (p/ EA/tester)  |
 //|   - Barra em formação limpa (sem 0.000 na janela de dados)       |
 //|                                                                  |
+//|  v1.40 (camada relacional — DESCRITIVA, diagnóstico/nowcasting): |
+//|   - Motor por PAR: t Newey-West + ER sobre o log-preço de cada   |
+//|     um dos 28 pares (mesma disciplina anti-repaint do índice)    |
+//|   - MOTIVAÇÃO (pesquisa ta-research, H1/2 anos): o índice        |
+//|     sintético, por ser média da cesta, gera FORÇA ESPÚRIA em     |
+//|     ~64% dos instantes ativos — o agregado acusa |t| >= gate mas |
+//|     menos de 3 dos 7 pares confirmam. A camada por par corrige   |
+//|     a leitura (célula a célula, sobre quem a moeda tende).       |
+//|   - Coluna "amp" no painel (breadth hard/soft), marcador ⚠ de    |
+//|     força espúria, aba MATRIZ 8x8 (botão MTX), alerta opcional   |
+//|     de amplitude >= 6/7.                                         |
+//|   - LIMITAÇÃO: célula do par sem estado Exausta (exigiria z-win  |
+//|     por par); estados do par = Madura / Emergindo-lite / Ruído.  |
+//|   - Gates do PAR calibrados por simulação (random walk, ~5% FP)  |
+//|     para a janela InpWMid. Se mudar InpWMid, ajuste InpPairGate: |
+//|       w=16 -> 2.90 | w=24 -> 2.51 | w=32 -> 2.35                 |
+//|       w=48 -> 2.21 | w=64 -> 2.13                                |
+//|                                                                  |
 //|  IMPORTANTE: este indicador NÃO gera sinal de entrada.           |
 //|  Estudo de evento (26k eventos) rejeitou continuação nestes      |
-//|  horizontes. Painel = contexto; decisão de entrada é do trader.  |
+//|  horizontes. Breadth/matriz são LEITURA DO PRESENTE (a pesquisa  |
+//|  testou continuação pós-reconhecimento: NULA). O aviso           |
+//|  "contexto, nao e sinal de entrada" cobre também a camada nova.  |
 //|                                                                  |
 //|  Buffers p/ iCustom:                                             |
 //|   0-7  M por moeda | 8-15 estado (0-3) | 16-23 direção (+1/-1)   |
+//|   24-31 breadth_hard*dir (assinado) | 32-39 breadth_soft*dir     |
 //|  Ordem: USD,EUR,GBP,JPY,CHF,CAD,AUD,NZD. Ler com shift>=1.       |
+//|  Barra em formação (shift 0) = cópia cosmética da última fechada.|
 //+------------------------------------------------------------------+
 #property copyright "Carlos — motor CSSM (validado por estudo de evento)"
-#property version   "1.30"
+#property version   "1.40"
+#property description "+ camada relacional (matriz 8x8, breadth, deteccao de forca espuria)"
 #property indicator_separate_window
-#property indicator_buffers 24
+#property indicator_buffers 40
 #property indicator_plots   8
 
 #property indicator_type1  DRAW_LINE
@@ -74,6 +99,12 @@ input int    InpPanelX    = 12;    // margem a partir da DIREITA
 input int    InpPanelY    = 16;    // painel Y
 input int    InpFont      = 9;     // fonte
 input bool   InpAlerts    = false; // alertar mudança de estado (barra fechada)
+//--- inputs: camada relacional (v1.40 — DESCRITIVA; ver cabeçalho)
+input bool   InpRelational   = true;   // camada relacional (matriz + breadth)
+input double InpPairGate     = 2.13;   // |t| p/ tendência confirmada no PAR (w=64; calibrado p/ ~5% FP)
+input double InpPairGateLow  = 1.28;   // |t| baixo do par (~20% de excedência)
+input bool   InpAlertBreadth = false;  // alerta quando breadth_hard >= 6/7 (barra fechada)
+// gates calibrados por InpWMid: 16->2.90 | 24->2.51 | 32->2.35 | 48->2.21 | 64->2.13
 //--- inputs: grade multi-timeframe
 input bool   InpMTF = true;                    // grade multi-timeframe no painel
 input ENUM_TIMEFRAMES InpGT1 = PERIOD_M30;     // MTF 1
@@ -101,6 +132,8 @@ color  stTxt[4]   = {C'190,190,190', clrBlack, clrWhite, clrWhite};
 double BM0[],BM1[],BM2[],BM3[],BM4[],BM5[],BM6[],BM7[];
 double BS0[],BS1[],BS2[],BS3[],BS4[],BS5[],BS6[],BS7[];
 double BD0[],BD1[],BD2[],BD3[],BD4[],BD5[],BD6[],BD7[];
+double BH0[],BH1[],BH2[],BH3[],BH4[],BH5[],BH6[],BH7[];   // 24-31 breadth_hard*dir
+double BB0[],BB1[],BB2[],BB3[],BB4[],BB5[],BB6[],BB7[];   // 32-39 breadth_soft*dir
 
 //--- pares
 string gPair[];
@@ -129,7 +162,25 @@ int      gGridDir[48];       // direção por [tf*8+c]
 bool     gGridOk[6];         // TF calculável (dados suficientes)
 datetime gGridLast[6];       // última barra processada por TF
 
-string   PFX="CSSM_";
+//--- camada relacional (v1.40): séries por par + breadth por moeda
+int    gLp=0;                 // comprimento das séries por par
+double gPairT[];              // t NW do par           [p*gLp+k]
+double gPairER[];             // ER do par             [p*gLp+k]
+double gPairLog[];            // log-closes do par     [p*gLp+k] (p/ dominância)
+bool   gPairOk[];             // par com histórico suficiente
+double gBrSoft[], gBrHard[];  // breadth por moeda     [c*gLs+k]
+bool   gRelOk=false;          // camada calculada nesta barra
+bool   gRelSlow=false;        // abortada por performance (>200ms)
+bool   gRelLogged=false;      // log de tempo (só 1ª barra)
+double gRelMs=0.0;
+bool   gPrevBHHigh[8];        // anti-spam do alerta de amplitude
+bool   gPrevBHInit=false;
+bool   gMtx=false;            // aba MATRIZ ativa (persiste como o FOCO)
+bool   gMtxDirty=false;
+
+string   PFX ="CSSM_";
+string   PPFX="CSSM_p_";      // objetos do painel-normal (grupo alternável)
+string   MPFX="CSSM_mx_";     // objetos da aba MATRIZ
 datetime gLastBar=0;
 
 //+------------------------------------------------------------------+
@@ -164,20 +215,22 @@ double IdxAt(int c,int k){ return gIdx[c*gLi+k]; }
 //    v1.20: substitui o t de slope sobre níveis (regressão espúria: 84% de
 //    falsos positivos em random walk; NW sobre níveis não conserta).
 //    Esta versão calibra em ~5-7% em ruído puro (nominal).
-double TStat(int c,int k,int w)
+//    v1.40: núcleo extraído p/ série arbitrária (reuso pelo motor por par,
+//    sem duplicar a matemática); TStat(c,k,w) é wrapper idêntico ao v1.30.
+double TStatSer(const double &ser[],int off,int len,int k,int w)
 {
-   if(k+w>=gLi) return 0.0;
+   if(k+w>=len) return 0.0;
    double mu=0;
-   for(int m=k;m<k+w;m++) mu+=IdxAt(c,m)-IdxAt(c,m+1);
+   for(int m=k;m<k+w;m++) mu+=ser[off+m]-ser[off+m+1];
    mu/=w;
    double g0=0,g1=0,g2=0,g3=0;
    for(int m=k;m<k+w;m++)
    {
-      double e0=IdxAt(c,m)-IdxAt(c,m+1)-mu;
+      double e0=ser[off+m]-ser[off+m+1]-mu;
       g0+=e0*e0;
-      if(m+1<k+w){ double e1=IdxAt(c,m+1)-IdxAt(c,m+2)-mu; g1+=e0*e1; }
-      if(m+2<k+w){ double e2=IdxAt(c,m+2)-IdxAt(c,m+3)-mu; g2+=e0*e2; }
-      if(m+3<k+w){ double e3=IdxAt(c,m+3)-IdxAt(c,m+4)-mu; g3+=e0*e3; }
+      if(m+1<k+w){ double e1=ser[off+m+1]-ser[off+m+2]-mu; g1+=e0*e1; }
+      if(m+2<k+w){ double e2=ser[off+m+2]-ser[off+m+3]-mu; g2+=e0*e2; }
+      if(m+3<k+w){ double e3=ser[off+m+3]-ser[off+m+4]-mu; g3+=e0*e3; }
    }
    g0/=w; g1/=(w-1); g2/=(w-2); g3/=(w-3);
    double v=g0+2.0*(0.75*g1+0.50*g2+0.25*g3);
@@ -185,13 +238,15 @@ double TStat(int c,int k,int w)
    double se=MathSqrt(v/w);
    return (se>0)? mu/se : 0.0;
 }
-double EffRatio(int c,int k,int w)
+double TStat(int c,int k,int w){ return TStatSer(gIdx,c*gLi,gLi,k,w); }
+double EffRatioSer(const double &ser[],int off,int len,int k,int w)
 {
-   if(k+w>=gLi) return 0.0;
-   double net=MathAbs(IdxAt(c,k)-IdxAt(c,k+w)), path=0;
-   for(int m=k;m<k+w;m++) path+=MathAbs(IdxAt(c,m)-IdxAt(c,m+1));
+   if(k+w>=len) return 0.0;
+   double net=MathAbs(ser[off+k]-ser[off+k+w]), path=0;
+   for(int m=k;m<k+w;m++) path+=MathAbs(ser[off+m]-ser[off+m+1]);
    return (path>0)? net/path : 0.0;
 }
+double EffRatio(int c,int k,int w){ return EffRatioSer(gIdx,c*gLi,gLi,k,w); }
 double VolMom(int c,int k,int w)
 {
    if(k+w>=gLi) return 0.0;
@@ -342,6 +397,168 @@ bool Compute()
 }
 
 //+------------------------------------------------------------------+
+//| v1.40 — CAMADA RELACIONAL (descritiva; ver cabeçalho)             |
+//| Motor por par: t NW + ER sobre o log-preço de cada par, com a     |
+//| MESMA disciplina anti-repaint do Compute(): CopyClose(...,1,W).   |
+//| Estado do par (enxuto, sem z-features): Madura |t|>=InpPairGate;  |
+//| Emergindo-lite InpPairGateLow<=|t|<gate; Ruído resto. Exausta     |
+//| fica fora da célula (exigiria z-win por par) — limitação no       |
+//| cabeçalho. Antissimetria: célula(A,B) = espelho exato de (B,A),   |
+//| verificada em SelfTestAntisym() na 1ª barra calculada.            |
+//+------------------------------------------------------------------+
+bool RelActive(){ return (InpRelational && gRelOk && !gRelSlow); }
+
+int FindPair(int a,int b)
+{
+   for(int p=0;p<gPairsN;p++)
+      if((gBaseIdx[p]==a && gQuoteIdx[p]==b)||(gBaseIdx[p]==b && gQuoteIdx[p]==a))
+         return p;
+   return -1;
+}
+//--- t orientado da célula (a,b): símbolo A+B usa t como está; B+A inverte
+double PairCellT(int a,int b,int k)
+{
+   int p=FindPair(a,b);
+   if(p<0 || !gPairOk[p]) return 0.0;
+   return (gBaseIdx[p]==a)? gPairT[p*gLp+k] : -gPairT[p*gLp+k];
+}
+bool PairCellOk(int a,int b)
+{
+   int p=FindPair(a,b);
+   return (p>=0 && gPairOk[p]);
+}
+int PairStateAbs(double t)
+{
+   double at=MathAbs(t);
+   if(at>=InpPairGate)    return ST_MATURE;
+   if(at>=InpPairGateLow) return ST_EMERGING;
+   return ST_NOISE;
+}
+bool Spurious(int c,int k)
+{
+   if(!RelActive()) return false;
+   return (MathAbs(gTmid[c*gLf+k])>=InpTGate && gBrHard[c*gLs+k]<3.0/7.0);
+}
+
+void SelfTestAntisym()
+{
+   int tested=0; bool ok=true;
+   for(int p=0;p<gPairsN && tested<3;p++)
+   {
+      if(!gPairOk[p]) continue;
+      int a=gBaseIdx[p], b=gQuoteIdx[p];
+      double tab=PairCellT(a,b,0), tba=PairCellT(b,a,0);
+      if(MathAbs(tab+tba)>1e-12)
+      {
+         ok=false;
+         Print(StringFormat("CSSM v1.40: ANTISSIMETRIA FALHOU em %s: t(%s,%s)=%.6f t(%s,%s)=%.6f",
+               gPair[p],cur[a],cur[b],tab,cur[b],cur[a],tba));
+      }
+      tested++;
+   }
+   if(ok) Print(StringFormat("CSSM v1.40: antissimetria OK (%d pares amostrados).",tested));
+}
+
+bool ComputePairs()
+{
+   ulong us0=GetMicrosecondCount();
+   gLp=gLs+InpWMid+2;
+   int W=gLp+2;
+   ArrayResize(gPairT,  gPairsN*gLp); ArrayInitialize(gPairT,0.0);
+   ArrayResize(gPairER, gPairsN*gLp); ArrayInitialize(gPairER,0.0);
+   ArrayResize(gPairLog,gPairsN*gLp); ArrayInitialize(gPairLog,0.0);
+   ArrayResize(gPairOk, gPairsN);
+   ENUM_TIMEFRAMES tf=Rtf(InpTF);
+   int good=0;
+   for(int p=0;p<gPairsN;p++)
+   {
+      gPairOk[p]=false;
+      double cl[]; ArraySetAsSeries(cl,true);
+      int copied=CopyClose(gPair[p],tf,1,W,cl);      // só barras FECHADAS
+      if(copied<W) continue;
+      bool bad=false;
+      for(int k=0;k<gLp;k++)
+      {
+         if(cl[k]<=0){ bad=true; break; }
+         gPairLog[p*gLp+k]=MathLog(cl[k]);
+      }
+      if(bad) continue;
+      for(int k=0;k<gLs;k++)
+      {
+         gPairT[p*gLp+k] =TStatSer(gPairLog,p*gLp,gLp,k,InpWMid);
+         gPairER[p*gLp+k]=EffRatioSer(gPairLog,p*gLp,gLp,k,InpWMid);
+      }
+      gPairOk[p]=true; good++;
+   }
+   if(good<gPairsN/2)
+   {
+      gRelMs=(GetMicrosecondCount()-us0)/1000.0;
+      return false;
+   }
+
+   // breadth por moeda: direção de referência = sinal do t do ÍNDICE (gTmid)
+   ArrayResize(gBrSoft,8*gLs); ArrayInitialize(gBrSoft,0.0);
+   ArrayResize(gBrHard,8*gLs); ArrayInitialize(gBrHard,0.0);
+   for(int c=0;c<8;c++)
+      for(int k=0;k<gLs;k++)
+      {
+         double ti=gTmid[c*gLf+k];
+         double d=(ti>0?1.0:(ti<0?-1.0:0.0));
+         int n=0,ns=0,nh=0;
+         for(int p=0;p<gPairsN;p++)
+         {
+            if(!gPairOk[p]) continue;
+            double tor;
+            if(gBaseIdx[p]==c)       tor= gPairT[p*gLp+k];
+            else if(gQuoteIdx[p]==c) tor=-gPairT[p*gLp+k];
+            else continue;
+            n++;
+            if(d!=0.0 && tor*d>0){ ns++; if(tor*d>=InpPairGate) nh++; }
+         }
+         if(n>0)
+         {
+            gBrSoft[c*gLs+k]=(double)ns/n;
+            gBrHard[c*gLs+k]=(double)nh/n;
+         }
+      }
+
+   gRelMs=(GetMicrosecondCount()-us0)/1000.0;
+   if(!gRelLogged)
+   {
+      Print(StringFormat("CSSM v1.40: ComputePairs() em %.1f ms (%d pares, w=%d).",
+            gRelMs,good,InpWMid));
+      gRelLogged=true;
+   }
+   if(gRelMs>200.0)
+   {
+      gRelSlow=true;   // desliga a camada nas próximas barras; aviso no painel
+      Print("CSSM v1.40: camada relacional DESLIGADA (ComputePairs > 200 ms).");
+   }
+   return true;
+}
+
+//--- alerta de amplitude: reconhecimento de tendência EM CURSO, não
+//    previsão (pesquisa a11/v2: continuação pós-reconhecimento testada e
+//    NULA). Só em transição, só barra fechada — mesmo padrão do CheckAlerts.
+void CheckBreadthAlerts()
+{
+   if(!RelActive()){ gPrevBHInit=false; return; }
+   if(InpAlertBreadth && gPrevBHInit)
+      for(int c=0;c<8;c++)
+      {
+         bool high=(gBrHard[c*gLs+0]>=6.0/7.0-1e-9);
+         if(high && !gPrevBHHigh[c])
+         {
+            int h=(int)MathRound(gBrHard[c*gLs+0]*7.0);
+            Alert(StringFormat("CSSM: %s tendencia ampla %s (%d/7 confirmados)",
+                  cur[c],gDirSer[c*gLs+0]>0?"ALTA":"BAIXA",h));
+         }
+      }
+   for(int c=0;c<8;c++) gPrevBHHigh[c]=(gBrHard[c*gLs+0]>=6.0/7.0-1e-9);
+   gPrevBHInit=true;
+}
+
+//+------------------------------------------------------------------+
 //| Grade MTF: estado atual (k=0) das 8 moedas num TF arbitrário.    |
 //| Reusa gIdx/gLi como rascunho e as funções de feature. O z-score  |
 //| se adapta ao histórico disponível; abaixo do mínimo => sem dado. |
@@ -473,17 +690,33 @@ void SetSD(int c,int idx,double s,double d)
       case 6: BS6[idx]=s; BD6[idx]=d; break; case 7: BS7[idx]=s; BD7[idx]=d; break;
    }
 }
+void SetBr(int c,int idx,double h,double s)   // v1.40: buffers 24-39
+{
+   switch(c)
+   {
+      case 0: BH0[idx]=h; BB0[idx]=s; break; case 1: BH1[idx]=h; BB1[idx]=s; break;
+      case 2: BH2[idx]=h; BB2[idx]=s; break; case 3: BH3[idx]=h; BB3[idx]=s; break;
+      case 4: BH4[idx]=h; BB4[idx]=s; break; case 5: BH5[idx]=h; BB5[idx]=s; break;
+      case 6: BH6[idx]=h; BB6[idx]=s; break; case 7: BH7[idx]=h; BB7[idx]=s; break;
+   }
+}
 void FillBuffers(int total)
 {
    int lo=MathMax(0,total-2-InpBars);
    for(int c=0;c<8;c++)
    {
-      for(int i=lo;i<total;i++){ SetM(c,i,EMPTY_VALUE); SetSD(c,i,EMPTY_VALUE,EMPTY_VALUE); }
+      for(int i=lo;i<total;i++)
+      { SetM(c,i,EMPTY_VALUE); SetSD(c,i,EMPTY_VALUE,EMPTY_VALUE); SetBr(c,i,EMPTY_VALUE,EMPTY_VALUE); }
       for(int k=0;k<InpBars && k<gLs;k++)
       {
          int idx=total-2-k; if(idx<0) break;
          SetM(c,idx,gM[c*gLf+k]);
          SetSD(c,idx,(double)gStateSer[c*gLs+k],(double)gDirSer[c*gLs+k]);
+         if(gRelOk)
+         {
+            double dr=(double)gDirSer[c*gLs+k];
+            SetBr(c,idx,gBrHard[c*gLs+k]*dr,gBrSoft[c*gLs+k]*dr);
+         }
       }
       // barra em formação repete o último valor FECHADO (cabeçalho útil,
       // linha sem gap, anti-repaint preservado)
@@ -491,6 +724,11 @@ void FillBuffers(int total)
       {
          SetM(c,total-1,gM[c*gLf+0]);
          SetSD(c,total-1,(double)gStateSer[c*gLs+0],(double)gDirSer[c*gLs+0]);
+         if(gRelOk)
+         {
+            double dr0=(double)gDirSer[c*gLs+0];
+            SetBr(c,total-1,gBrHard[c*gLs+0]*dr0,gBrSoft[c*gLs+0]*dr0);
+         }
       }
    }
 }
@@ -572,6 +810,35 @@ void DrawBtn(int win)
       ObjectSetInteger(0,nm,OBJPROP_BGCOLOR,C'50,50,65');
       ObjectSetInteger(0,nm,OBJPROP_STATE,false);
    }
+
+   // v1.40: botão MTX (aba matriz) — mesma infraestrutura do FOCO
+   if(!InpRelational) return;
+   string nx=PFX+"btnMtx";
+   if(ObjectFind(0,nx)<0)
+   {
+      ObjectCreate(0,nx,OBJ_BUTTON,win,0,0);
+      ObjectSetInteger(0,nx,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+      ObjectSetInteger(0,nx,OBJPROP_XDISTANCE,132);
+      ObjectSetInteger(0,nx,OBJPROP_YDISTANCE,4);
+      ObjectSetInteger(0,nx,OBJPROP_XSIZE,52);
+      ObjectSetInteger(0,nx,OBJPROP_YSIZE,18);
+      ObjectSetString (0,nx,OBJPROP_FONT,"Consolas");
+      ObjectSetInteger(0,nx,OBJPROP_FONTSIZE,8);
+      ObjectSetInteger(0,nx,OBJPROP_SELECTABLE,false);
+   }
+   if(gMtx)
+   {
+      ObjectSetString (0,nx,OBJPROP_TEXT,"[ MTX ]");
+      ObjectSetInteger(0,nx,OBJPROP_COLOR,clrBlack);
+      ObjectSetInteger(0,nx,OBJPROP_BGCOLOR,clrGoldenrod);
+   }
+   else
+   {
+      ObjectSetString (0,nx,OBJPROP_TEXT,"[ MTX ]");
+      ObjectSetInteger(0,nx,OBJPROP_COLOR,clrWhite);
+      ObjectSetInteger(0,nx,OBJPROP_BGCOLOR,C'50,50,65');
+      ObjectSetInteger(0,nx,OBJPROP_STATE,false);
+   }
 }
 
 //+------------------------------------------------------------------+
@@ -631,9 +898,18 @@ void DrawPanel()
    if(!InpPanel) return;
    int win=ChartWindowFind(); if(win<0) return;
 
+   bool rel=RelActive();                    // v1.40: camada relacional ativa
+   static int prevLayout=-1;                // -1 nunca, 0 sem rel, 1 com rel
+   int layout=rel?1:0;
+   if(prevLayout!=-1 && prevLayout!=layout) ObjectsDeleteAll(0,PPFX);
+   prevLayout=layout;
+
    int rh=InpFont+9;
-   int colName=0, colBar=36, colState=116, colRest=204;
+   int colName=0, colBar=36, colState=116;
    int barW=72, stW=82;
+   int ampW=(rel?48:0);                     // v1.40: coluna "amp" após o estado
+   int colAmp=colState+stW+6;
+   int colRest=204+ampW;
    int cellW=20;
    int colGrid=colRest+196;
    int colAlin=colGrid+6*cellW+8;
@@ -641,17 +917,20 @@ void DrawPanel()
    int cw=(int)ChartGetInteger(0,CHART_WIDTH_IN_PIXELS);
    int x=cw-InpPanelX-colW+6; if(x<6) x=6;
    int y=InpPanelY;
+   int chpx=(InpFont*7)/9; if(chpx<5) chpx=5;   // avanço aprox. Consolas
 
-   Rect(PFX+"bg",win,x-6,y-6,colW,rh*11+16,C'24,24,32',C'80,80,90');
-   Lbl(PFX+"hd",win,x,y,StringFormat("CSSM CONTEXTO  %s",TfStr(InpTF)),clrWhiteSmoke);
-   Lbl(PFX+"hd2",win,x+colRest,y+rh," DIR    M      t   pers acc",C'150,150,150');
-   Lbl(PFX+"hd3",win,x+colState,y+rh,"ESTADO(idade)",C'150,150,150');
+   bool foot2=(rel || (InpRelational && gRelSlow));
+   Rect(PPFX+"bg",win,x-6,y-6,colW,rh*(foot2?12:11)+16,C'24,24,32',C'80,80,90');
+   Lbl(PPFX+"hd",win,x,y,StringFormat("CSSM CONTEXTO  %s",TfStr(InpTF)),clrWhiteSmoke);
+   Lbl(PPFX+"hd2",win,x+colRest,y+rh," DIR    M      t   pers acc",C'150,150,150');
+   Lbl(PPFX+"hd3",win,x+colState,y+rh,"ESTADO(idade)",C'150,150,150');
+   if(rel) Lbl(PPFX+"hdA",win,x+colAmp,y+rh,"amp",C'150,150,150');
    if(InpMTF)
    {
       string gh="";
       for(int i=0;i<6;i++) gh+=StringFormat("%-3s",TfShort(gGTF[i]));
-      Lbl(PFX+"hd4",win,x+colGrid,y+rh,gh,C'150,150,150');
-      Lbl(PFX+"hd5",win,x+colAlin,y+rh,"alin",C'150,150,150');
+      Lbl(PPFX+"hd4",win,x+colGrid,y+rh,gh,C'150,150,150');
+      Lbl(PPFX+"hd5",win,x+colAlin,y+rh,"alin",C'150,150,150');
    }
 
    // ranking por M
@@ -669,29 +948,50 @@ void DrawPanel()
       int yy=y+rh*(r+2);
       double m=gM[c*gLf+0], t=gTmid[c*gLf+0], pe=gPers[c*gLf+0];
       int st=gStateSer[c*gLs+0], dr=gDirSer[c*gLs+0];
+      bool spur=(rel && Spurious(c,0));
 
-      // nome na cor da linha
-      Lbl(PFX+"nm"+(string)r,win,x+colName,yy,cur[c],colArr[c]);
+      // v1.40: marcador de força espúria (índice ativo sem confirmação <3/7)
+      if(rel)
+         Lbl(PPFX+"wr"+(string)r,win,x+colName,yy,
+             spur? ShortToString(0x26A0):" ",clrOrange);
+
+      // nome na cor da linha (desloca p/ dar lugar ao ⚠ quando rel)
+      Lbl(PPFX+"nm"+(string)r,win,x+colName+(rel?13:0),yy,cur[c],colArr[c]);
 
       // barra de força: trilho + preenchimento a partir do centro
       int cx0=x+colBar, cy=yy+2, half=barW/2;
-      Rect(PFX+"tr"+(string)r,win,cx0,cy,barW,InpFont+2,C'38,38,46',C'55,55,62');
+      Rect(PPFX+"tr"+(string)r,win,cx0,cy,barW,InpFont+2,C'38,38,46',C'55,55,62');
       int fill=(int)MathRound(half*MathMin(MathAbs(m)/mMax,1.0));
       if(fill<1) fill=1;
       int fx=(m>=0)? cx0+half : cx0+half-fill;
       color fc=(m>=0)? C'46,160,90' : C'190,60,50';
-      Rect(PFX+"fl"+(string)r,win,fx,cy,fill,InpFont+2,fc,fc);
+      Rect(PPFX+"fl"+(string)r,win,fx,cy,fill,InpFont+2,fc,fc);
 
       // estado: célula com fundo + idade
-      Rect(PFX+"sr"+(string)r,win,x+colState,yy,stW,InpFont+6,stBg[st],stBg[st]);
-      Lbl(PFX+"st"+(string)r,win,x+colState+4,yy+1,
+      Rect(PPFX+"sr"+(string)r,win,x+colState,yy,stW,InpFont+6,stBg[st],stBg[st]);
+      Lbl(PPFX+"st"+(string)r,win,x+colState+4,yy+1,
           StringFormat("%s %d",stName[st],MathMin(gAge[c],99)),stTxt[st]);
 
-      // resto da linha
+      // v1.40: coluna amp — hard como número principal, soft apagado
+      if(rel)
+      {
+         int hN=(int)MathRound(gBrHard[c*gLs+0]*7.0);
+         int sN=(int)MathRound(gBrSoft[c*gLs+0]*7.0);
+         color hc=(hN==0)? C'120,120,120' :
+                  ((dr>0)? C'90,200,130' : C'230,120,105');
+         Lbl(PPFX+"ah"+(string)r,win,x+colAmp,yy,
+             StringFormat("%d/7",hN),hc);
+         Lbl(PPFX+"as"+(string)r,win,x+colAmp+26,yy,
+             ShortToString(0x2022)+IntegerToString(sN),C'110,110,118');
+      }
+
+      // resto da linha: DIR | M (colorível p/ espúria) | t pers acc
       string dirs=(dr>0)?"ALTA ":((dr<0)?"BAIXA":" --  ");
-      Lbl(PFX+"rw"+(string)r,win,x+colRest,yy,
-          StringFormat("%s %+5.2f %+6.1f %4.2f  %s",dirs,m,t,pe,Arr(gAccZ0[c])),
-          C'205,205,210');
+      Lbl(PPFX+"rw"+(string)r,win,x+colRest,yy,dirs,C'205,205,210');
+      Lbl(PPFX+"rm"+(string)r,win,x+colRest+6*chpx,yy,
+          StringFormat("%+5.2f",m),spur? C'130,130,135':C'205,205,210');
+      Lbl(PPFX+"rx"+(string)r,win,x+colRest+12*chpx,yy,
+          StringFormat("%+6.1f %4.2f  %s",t,pe,Arr(gAccZ0[c])),C'205,205,210');
 
       // grade MTF
       if(InpMTF)
@@ -699,8 +999,8 @@ void DrawPanel()
          int nUp=0,nDn=0;
          for(int i=0;i<6;i++)
          {
-            string nc=PFX+"g"+(string)r+"_"+(string)i;
-            string nl=PFX+"gl"+(string)r+"_"+(string)i;
+            string nc=PPFX+"g"+(string)r+"_"+(string)i;
+            string nl=PPFX+"gl"+(string)r+"_"+(string)i;
             int gx=x+colGrid+i*cellW;
             if(!gGridOk[i])
             {
@@ -718,10 +1018,118 @@ void DrawPanel()
          string atx=(amax==0)? " - " : StringFormat("%d/6%s",amax,
                      (nUp>=nDn)?ShortToString(0x25B2):ShortToString(0x25BC));
          color acl=(amax==0)? C'120,120,120' : ((nUp>=nDn)? C'90,200,130' : C'230,120,105');
-         Lbl(PFX+"al"+(string)r,win,x+colAlin,yy,atx,acl);
+         Lbl(PPFX+"al"+(string)r,win,x+colAlin,yy,atx,acl);
       }
    }
-   Lbl(PFX+"ft",win,x,y+rh*10+4,"contexto, nao e sinal de entrada",C'150,120,120');
+   Lbl(PPFX+"ft",win,x,y+rh*10+4,"contexto, nao e sinal de entrada",C'150,120,120');
+   if(rel)
+      Lbl(PPFX+"ft2",win,x,y+rh*11+4,
+          ShortToString(0x26A0)+" = indice ativo sem confirmacao dos pares (<3/7)",
+          C'150,120,120');
+   else if(InpRelational && gRelSlow)
+      Lbl(PPFX+"ft2",win,x,y+rh*11+4,
+          "camada relacional OFF (ComputePairs > 200 ms)",clrOrange);
+}
+
+//+------------------------------------------------------------------+
+//| v1.40 — Aba MATRIZ 8x8 (alternada pelo botão MTX)                 |
+//| Célula (a,b) = estado do PAR orientado: fundo na cor do estado,   |
+//| texto M↑/M↓/E↑/E↓/· . Só recalculada/redesenhada quando visível   |
+//| e em barra fechada (Recalc controla via gMtxDirty).               |
+//+------------------------------------------------------------------+
+void DrawMatrix()
+{
+   if(!InpPanel || !RelActive()) return;
+   int win=ChartWindowFind(); if(win<0) return;
+
+   int rh=InpFont+9;
+   int cellw=30, hdrw=36;
+   int colW=hdrw+8*cellw+16;
+   int cw=(int)ChartGetInteger(0,CHART_WIDTH_IN_PIXELS);
+   int x=cw-InpPanelX-colW+6; if(x<6) x=6;
+   int y=InpPanelY;
+   string up=ShortToString(0x2191), dn=ShortToString(0x2193);
+
+   Rect(MPFX+"bg",win,x-6,y-6,colW,rh*12+16,C'24,24,32',C'80,80,90');
+   Lbl(MPFX+"hd",win,x,y,
+       StringFormat("CSSM MATRIZ 8x8  %s  (t do PAR, w=%d)",TfStr(InpTF),InpWMid),
+       clrWhiteSmoke);
+
+   for(int b=0;b<8;b++)
+      Lbl(MPFX+"ch"+(string)b,win,x+hdrw+b*cellw+3,y+rh,cur[b],colArr[b]);
+
+   for(int a=0;a<8;a++)
+   {
+      int yy=y+rh*(a+2);
+      Lbl(MPFX+"rh"+(string)a,win,x,yy+1,cur[a],colArr[a]);
+      for(int b=0;b<8;b++)
+      {
+         string nc=MPFX+"c"+(string)a+"_"+(string)b;
+         string nl=MPFX+"l"+(string)a+"_"+(string)b;
+         int gx=x+hdrw+b*cellw;
+         if(a==b)
+         {
+            Rect(nc,win,gx,yy,cellw-3,InpFont+6,C'30,30,38',C'30,30,38');
+            Lbl(nl,win,gx+9,yy+1,"-",C'90,90,96');
+            continue;
+         }
+         if(!PairCellOk(a,b))
+         {
+            Rect(nc,win,gx,yy,cellw-3,InpFont+6,C'40,40,46',C'40,40,46');
+            Lbl(nl,win,gx+9,yy+1,"?",C'120,120,120');
+            continue;
+         }
+         double t=PairCellT(a,b,0);
+         int st=PairStateAbs(t);
+         if(st==ST_NOISE)
+         {
+            Rect(nc,win,gx,yy,cellw-3,InpFont+6,C'40,40,46',C'40,40,46');
+            Lbl(nl,win,gx+9,yy+1,ShortToString(0x00B7),C'150,150,150');
+         }
+         else
+         {
+            string txt=((st==ST_MATURE)?"M":"E")+((t>0)?up:dn);
+            Rect(nc,win,gx,yy,cellw-3,InpFont+6,stBg[st],stBg[st]);
+            Lbl(nl,win,gx+5,yy+1,txt,stTxt[st]);
+         }
+      }
+   }
+
+   // rodapé: líder por breadth_hard + decomposição de dominância (top-3)
+   int lead=-1; double bh=-1.0;
+   for(int c=0;c<8;c++)
+      if(gDirSer[c*gLs+0]!=0 && gBrHard[c*gLs+0]>bh){ bh=gBrHard[c*gLs+0]; lead=c; }
+   string foot="sem lider";
+   if(lead>=0)
+   {
+      int hN=(int)MathRound(bh*7.0);
+      // dominância: retorno log orientado de cada par do líder em InpWMid barras
+      double rets[8]; int  vsIdx[8]; int nd=0; double tot=0.0;
+      for(int p=0;p<gPairsN;p++)
+      {
+         if(!gPairOk[p]) continue;
+         int o=-1; double sgn=0.0;
+         if(gBaseIdx[p]==lead){ o=gQuoteIdx[p]; sgn=1.0; }
+         else if(gQuoteIdx[p]==lead){ o=gBaseIdx[p]; sgn=-1.0; }
+         else continue;
+         if(InpWMid>=gLp) continue;
+         double r=sgn*(gPairLog[p*gLp+0]-gPairLog[p*gLp+InpWMid]);
+         rets[nd]=r; vsIdx[nd]=o; nd++; tot+=MathAbs(r);
+      }
+      for(int i=0;i<nd-1;i++) for(int j=i+1;j<nd;j++)
+         if(rets[j]>rets[i])
+         { double tr=rets[i]; rets[i]=rets[j]; rets[j]=tr;
+           int ti=vsIdx[i]; vsIdx[i]=vsIdx[j]; vsIdx[j]=ti; }
+      foot=StringFormat("%s%s %d/7 | dom:",cur[lead],
+                        (gDirSer[lead*gLs+0]>0)?up:dn,hN);
+      for(int i=0;i<3 && i<nd;i++)
+         foot+=StringFormat(" %s %+.0fbp %.0f%%%s",cur[vsIdx[i]],rets[i]*1e4,
+               (tot>0)?100.0*MathAbs(rets[i])/tot:0.0,(i<2 && i<nd-1)?" ·":"");
+   }
+   Lbl(MPFX+"ft",win,x,y+rh*10+4,foot,C'200,200,205');
+   Lbl(MPFX+"ft2",win,x,y+rh*11+4,
+       "M=|t|>=gate  E=|t|>=low  |  leitura descritiva, nao e sinal",
+       C'150,120,120');
 }
 
 //+------------------------------------------------------------------+
@@ -755,6 +1163,15 @@ int OnInit()
    SetIndexBuffer(18,BD2,INDICATOR_CALCULATIONS); SetIndexBuffer(19,BD3,INDICATOR_CALCULATIONS);
    SetIndexBuffer(20,BD4,INDICATOR_CALCULATIONS); SetIndexBuffer(21,BD5,INDICATOR_CALCULATIONS);
    SetIndexBuffer(22,BD6,INDICATOR_CALCULATIONS); SetIndexBuffer(23,BD7,INDICATOR_CALCULATIONS);
+   // v1.40: 24-31 breadth_hard*dir | 32-39 breadth_soft*dir
+   SetIndexBuffer(24,BH0,INDICATOR_CALCULATIONS); SetIndexBuffer(25,BH1,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(26,BH2,INDICATOR_CALCULATIONS); SetIndexBuffer(27,BH3,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(28,BH4,INDICATOR_CALCULATIONS); SetIndexBuffer(29,BH5,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(30,BH6,INDICATOR_CALCULATIONS); SetIndexBuffer(31,BH7,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(32,BB0,INDICATOR_CALCULATIONS); SetIndexBuffer(33,BB1,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(34,BB2,INDICATOR_CALCULATIONS); SetIndexBuffer(35,BB3,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(36,BB4,INDICATOR_CALCULATIONS); SetIndexBuffer(37,BB5,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(38,BB6,INDICATOR_CALCULATIONS); SetIndexBuffer(39,BB7,INDICATOR_CALCULATIONS);
 
    for(int p=0;p<8;p++)
    {
@@ -780,10 +1197,14 @@ int OnInit()
       gPair[gPairsN]=sym; gBaseIdx[gPairsN]=bi; gQuoteIdx[gPairsN]=qi;
       gPairsN++; seen[key]=true;
    }
-   Print("CSSM_Contexto v1.30: ",gPairsN," pares detectados.");
+   Print("CSSM_Contexto v1.40: ",gPairsN," pares detectados.");
 
    DetectFocusPair();
    gFocus=InpFocusStart;
+   gMtx=false; gMtxDirty=false;
+   gRelOk=false; gRelSlow=false; gRelLogged=false;
+   gPrevBHInit=false;
+   for(int c=0;c<8;c++) gPrevBHHigh[c]=false;
 
    gGTF[0]=InpGT1; gGTF[1]=InpGT2; gGTF[2]=InpGT3;
    gGTF[3]=InpGT4; gGTF[4]=InpGT5; gGTF[5]=InpGT6;
@@ -839,14 +1260,33 @@ void Recalc(int total,bool force=false)
       }
       Comment("");
       gLastBar=t0;
+      // v1.40: camada relacional ANTES do FillBuffers (buffers 24-39 a
+      // dependem); usa gTmid recém-calculado
+      gRelOk=false;
+      if(InpRelational && !gRelSlow)
+      {
+         gRelOk=ComputePairs();
+         if(gRelOk && !gPrevBHInit) SelfTestAntisym();
+         gMtxDirty=true;                    // matriz só redesenha em barra nova
+      }
       FillBuffers(total);
    }
    UpdateGrid();
    ApplyFocus();
    int win=ChartWindowFind();
    if(win>=0){ DrawBtn(win); DrawEndLabels(win); }
-   DrawPanel();
-   if(mainNew) CheckAlerts();
+   // v1.40: aba MATRIZ alterna com o painel-normal
+   static int prevView=-1;                  // 0 painel, 1 matriz
+   int view=(gMtx && RelActive())?1:0;
+   if(prevView!=-1 && prevView!=view)
+      ObjectsDeleteAll(0,(view==1)?PPFX:MPFX);
+   prevView=view;
+   if(view==1)
+   {
+      if(gMtxDirty){ DrawMatrix(); gMtxDirty=false; }
+   }
+   else DrawPanel();
+   if(mainNew){ CheckAlerts(); CheckBreadthAlerts(); }
    ChartRedraw();
 }
 
@@ -871,6 +1311,14 @@ int OnCalculate(const int rates_total,const int prev_calculated,
       ArrayInitialize(BD2,EMPTY_VALUE); ArrayInitialize(BD3,EMPTY_VALUE);
       ArrayInitialize(BD4,EMPTY_VALUE); ArrayInitialize(BD5,EMPTY_VALUE);
       ArrayInitialize(BD6,EMPTY_VALUE); ArrayInitialize(BD7,EMPTY_VALUE);
+      ArrayInitialize(BH0,EMPTY_VALUE); ArrayInitialize(BH1,EMPTY_VALUE);
+      ArrayInitialize(BH2,EMPTY_VALUE); ArrayInitialize(BH3,EMPTY_VALUE);
+      ArrayInitialize(BH4,EMPTY_VALUE); ArrayInitialize(BH5,EMPTY_VALUE);
+      ArrayInitialize(BH6,EMPTY_VALUE); ArrayInitialize(BH7,EMPTY_VALUE);
+      ArrayInitialize(BB0,EMPTY_VALUE); ArrayInitialize(BB1,EMPTY_VALUE);
+      ArrayInitialize(BB2,EMPTY_VALUE); ArrayInitialize(BB3,EMPTY_VALUE);
+      ArrayInitialize(BB4,EMPTY_VALUE); ArrayInitialize(BB5,EMPTY_VALUE);
+      ArrayInitialize(BB6,EMPTY_VALUE); ArrayInitialize(BB7,EMPTY_VALUE);
       gLastBar=0; gPrevInit=false;
    }
    // barra em formação: repete o último valor fechado a cada tick (o MT5
@@ -883,6 +1331,11 @@ int OnCalculate(const int rates_total,const int prev_calculated,
       {
          SetM(c,last,gM[c*gLf+0]);
          SetSD(c,last,(double)gStateSer[c*gLs+0],(double)gDirSer[c*gLs+0]);
+         if(gRelOk && ArraySize(gBrHard)>=8*gLs)   // v1.40: cópia cosmética
+         {
+            double dr0=(double)gDirSer[c*gLs+0];
+            SetBr(c,last,gBrHard[c*gLs+0]*dr0,gBrSoft[c*gLs+0]*dr0);
+         }
       }
    }
    Recalc(rates_total);
@@ -907,6 +1360,26 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
       int win=ChartWindowFind();
       if(win>=0){ DrawBtn(win); DrawEndLabels(win); }
       ObjectSetInteger(0,PFX+"btnFocus",OBJPROP_STATE,false);
+      ChartRedraw();
+   }
+   // v1.40: alterna painel-normal <-> matriz (persiste como o FOCO)
+   if(id==CHARTEVENT_OBJECT_CLICK && sparam==PFX+"btnMtx")
+   {
+      gMtx=!gMtx;
+      int win=ChartWindowFind();
+      if(win>=0) DrawBtn(win);
+      if(gMtx && RelActive())
+      {
+         ObjectsDeleteAll(0,PPFX);
+         DrawMatrix();
+         gMtxDirty=false;
+      }
+      else
+      {
+         ObjectsDeleteAll(0,MPFX);
+         DrawPanel();
+      }
+      ObjectSetInteger(0,PFX+"btnMtx",OBJPROP_STATE,false);
       ChartRedraw();
    }
 }

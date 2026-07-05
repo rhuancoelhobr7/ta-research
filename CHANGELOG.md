@@ -121,6 +121,20 @@ em dias research (a11_relational_study.py):
   de par por |M| orientado dá +1.18 bp sobre a média dos 7, IC [-0.65,
   +3.00] cruza 0, indistinguível de par aleatório (n=394).
 
+## 2026-07-05 — Cssm.mq5 v1.40: camada relacional no indicador MT5
+
+O indicador original (v1.30, importado intocado no commit anterior) ganhou
+a camada relacional validada pelo a11 — detalhe mudança-a-mudança com
+âncoras de linha em `INDICATOR_CHANGELOG.md`. Em resumo: motor por par
+(t NW + ER, mesma disciplina anti-repaint), buffers 24-31/32-39
+(breadth_hard/soft × dir p/ EAs), coluna "amp" e marcador ⚠ de força
+espúria no painel, aba MATRIZ 8×8 com dominância do líder, alerta opcional
+de amplitude ≥ 6/7 (reconhecimento, não previsão — continuação testada e
+nula). Gates do par calibrados por w documentados no cabeçalho (64→2.13).
+Compilado no MetaEditor: 0 erros, 0 warnings; regressão garantida com
+`InpRelational=false` (buffers 0-23 no caminho v1.30 intocado).
+`Export_CSSM_Parity.mq5` fecha o critério 6 (execução manual pendente).
+
 ## Pendente
 
 - `a7_final_test.py` (holdout, últimos ~20% dos dias): NÃO executado. Roda
