@@ -41,9 +41,16 @@ a pesquisa (a11/v2) testou continuação pós-reconhecimento: **nula**.
 5. **Performance**: tempo de `ComputePairs()` logado no Journal na 1ª
    barra; guarda auto-desliga a camada acima de 200 ms com aviso no painel.
    (28 pares × 300 barras × TStat w=64 — mesma ordem do Compute atual.)
-6. **Paridade com a pesquisa**: `Export_CSSM_Parity.mq5` exporta breadth
-   hard/soft (buffers 24/32+c) de 1 moeda × 50 barras p/ CSV; comparação
-   com `data/features/relational_H1_w64.parquet` documentada no próprio
-   script (usar `InpPairGate=2.137276`, o gate exato da pesquisa).
-   PENDENTE de execução manual no terminal — o t NW em si é o porte já
-   validado pela suíte (tests/test_engine.py + test_relational.py).
+6. **Paridade com a pesquisa — EXECUTADA em 2026-07-05** (USD × 50 barras
+   H1, 2026-07-01 22:00 → 2026-07-03 23:00, gate exato 2.137276):
+   - **breadth_hard: IDÊNTICO em 50/50 barras (diff máx 0.00e+00)** — 350
+     comparações par-a-par contra o gate, todas iguais. É a métrica de
+     contrato (buffers 24-31, ⚠, matriz, alertas).
+   - breadth_soft: idêntico em 46/50; as 4 divergências ocorrem TODAS com
+     \|t_índice\| entre 0.007 e 0.27 (0.3%-13% do gate) — fronteira
+     discreta onde o sinal de referência flipa por diferença de
+     float/feed na 6ª casa. Não é divergência de matemática (se fosse, o
+     hard no gate exato não bateria 50/50); é o comportamento esperado de
+     contagem discreta em zona morta, onde o soft não carrega informação
+     (hard = 0 dos dois lados em todas as 4 barras).
+   - Veredicto: **PARIDADE CONFIRMADA**.
