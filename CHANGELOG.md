@@ -162,9 +162,28 @@ nem a box literal.
   tese "só com CSS", não reabre as anteriores.
 - Dado bruto: re-export s0 bloqueado por "Máx. barras no gráfico"=100k no
   terminal (copy_rates_range Invalid params; M5 só até 2025-03). Usuário
-  orientado a subir o limite; `_meta.json` verificado preservado em
-  `_meta_verified_tz.bak.json` (s0 sobrescreve e a verificação de fuso é
-  irreversível).
+  subiu o limite; re-export ok (28 pares, M5 2a + D1 7a). Fuso re-verificado
+  no novo export: exceções = semanas de DST dos EUA e feriados, nenhum
+  deslocamento uniforme — evidência anexada ao `_meta.json`.
+
+## 2026-07-06 — a12 executado: **RESULTADO NULO** (results/*_a12)
+
+Código congelado em commit ANTES da primeira execução. Dois universos:
+usd7 (fiel ao indicador do usuário) e all28 (sensibilidade).
+
+- Contraste: maior d de Cohen 0.10 (MN_dist_box/dline) — nada separa
+  rotulados de não-rotulados, mesmo padrão do a5.
+- Regras pré-registradas (395 dias research): R1 10.1/11.8% top-1,
+  R2 13.9/14.9%, R3 10.6/10.9% — nenhuma sobrevive. No all28 a R2 passa
+  dos baselines por 0.4pp mas fica ABAIXO do p95 permutado (15.7%) —
+  exatamente o tipo de falso positivo que o reality check existe para matar.
+- Teto de ML sobre a geometria: AUC 0.503–0.518 — sem sinal.
+- Conclusão: a geometria literal do CSS clássico (ranking por barra, box
+  ±0.2, inclinação da linha) TAMBÉM não prevê o rótulo em T0. A tese
+  "identifica só com o CSS" está agora refutada nas duas formulações
+  possíveis (features estatísticas E geometria literal). Restam, como
+  hipóteses vivas: informação fora do gráfico (calendário/fundamentos —
+  nunca testada) ou decisão em horário ≠ T0.
 
 ## Pendente
 
