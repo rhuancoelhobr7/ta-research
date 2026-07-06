@@ -311,3 +311,26 @@ Resultado da autenticação (results/*_a15, tol 15bp preço / 3% lucro):
   (sextas) e 01/07.
 - Veredito: prints AUTÊNTICOS quanto a preços (nível de mercado real);
   autenticidade ≠ conta real ≠ skill preditivo.
+
+## 2026-07-06 — infra de paridade do Cssm v1.41
+
+- `Cssm_v140_ref.mq5`: cópia CONGELADA do v1.40 (git show main:Cssm.mq5),
+  só para servir de referência no teste de paridade. Não editar.
+- `Test_CSSM_Parity_V141.mq5`: script MT5 que compara buffers 0-39 do
+  v1.40 vs v1.41(WM_BARS) em 100 barras fechadas — critério de aceite
+  nº 1. O handle v1.41 recebe horizonte/AutoGates ativos de propósito:
+  em WM_BARS devem ser ignorados; se vazarem, o diff acusa.
+- `Export_CSSM_Parity.mq5` v1.01 — bug latente descoberto e corrigido:
+  a chamada iCustom posicional pulava os 7 inputs visuais, então o gate
+  exato da pesquisa (2.137276) caía em InpEndLabels e NUNCA chegava em
+  InpPairGate (ficava 2.13). Consequência: a checagem de paridade do
+  breadth (a11/v1.40) rodou com gate 2.13, não 2.137276 — diferença só
+  em barras com |t| entre os dois valores; se a paridade for re-checada,
+  usar o script corrigido. Também realinhado à ordem de inputs do v1.41
+  (4 inputs de modo na frente, WM_BARS forçado).
+- Verificação executada no MT5 (USDCAD, Journal 2026-07-06): paridade
+  **PASS** — buffers 0-39, 100 barras, max|diff|=0.0 em H1 e H4; tabela
+  de conversão, GateFor (nós + monotonicidade) e performance OK
+  (Recalc 34-37 ms; ComputePairs 3,6 ms c/ w=18 vs 9,2 ms c/ w=64).
+  Nota: este commit ficou fora do merge do PR #6 (merge feito antes do
+  push); entra agora junto com o guia de leitura.
