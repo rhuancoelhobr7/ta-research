@@ -1,0 +1,11 @@
+{
+  "csv": "specialist_ledger.csv",
+  "tol_price_bp": 15.0,
+  "tol_profit_pct": 3.0,
+  "n_legs": 63,
+  "pass": {
+    "out": 48,
+    "in": 63,
+    "profit": 63
+  }
+}
