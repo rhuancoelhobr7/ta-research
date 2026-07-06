@@ -276,3 +276,20 @@ pesquisa — nenhuma fase, rótulo ou script Python é afetado.
   Journal imprime tabela de conversão, verificação do GateFor (nós
   exatos + monotonicidade) e tempo do Recalc inicial. Anti-repaint,
   alertas em barra fechada e idade dos estados intactos.
+
+## 2026-07-06 — infra de paridade do Cssm v1.41 (mesmo PR)
+
+- `Cssm_v140_ref.mq5`: cópia CONGELADA do v1.40 (git show main:Cssm.mq5),
+  só para servir de referência no teste de paridade. Não editar.
+- `Test_CSSM_Parity_V141.mq5`: script MT5 que compara buffers 0-39 do
+  v1.40 vs v1.41(WM_BARS) em 100 barras fechadas — critério de aceite
+  nº 1. O handle v1.41 recebe horizonte/AutoGates ativos de propósito:
+  em WM_BARS devem ser ignorados; se vazarem, o diff acusa.
+- `Export_CSSM_Parity.mq5` v1.01 — bug latente descoberto e corrigido:
+  a chamada iCustom posicional pulava os 7 inputs visuais, então o gate
+  exato da pesquisa (2.137276) caía em InpEndLabels e NUNCA chegava em
+  InpPairGate (ficava 2.13). Consequência: a checagem de paridade do
+  breadth (a11/v1.40) rodou com gate 2.13, não 2.137276 — diferença só
+  em barras com |t| entre os dois valores; se a paridade for re-checada,
+  usar o script corrigido. Também realinhado à ordem de inputs do v1.41
+  (4 inputs de modo na frente, WM_BARS forçado).
