@@ -135,6 +135,56 @@ Compilado no MetaEditor: 0 erros, 0 warnings; regressão garantida com
 `InpRelational=false` (buffers 0-23 no caminho v1.30 intocado).
 `Export_CSSM_Parity.mq5` fecha o critério 6 (execução manual pendente).
 
+## 2026-07-06 — a12 (em andamento): geometria literal do CSS clássico
+
+Motivação: posts públicos do especialista indicam que o "score de inflação/
+deflação" seria a GEOMETRIA das linhas do CSS clássico (TMA-slope,
+normalizado por barra): dentro/fora da box ±0.2, linha ascendente/
+descendente, proximidade do zero — lida em MN/W1/D1/H4/H1. Isso NÃO foi
+testado literalmente: o cssm_engine usa features por-moeda (t, ER, M,
+acc_z), sem a normalização cross-sectional por barra (ranking relativo)
+nem a box literal.
+
+- `css_classic.py` + testes: porte fiel do CurrencySlopeStrength.mq5 do
+  usuário (TMA CAUSAL — a TMA centrada repinta e foi rejeitada), slope por
+  par, agregação por moeda, normalização por barra (mais forte = ±2*box).
+  Anti-lookahead travado em teste (normalização é cross-sectional na
+  MESMA barra; não vaza futuro).
+- HIPÓTESES PRÉ-REGISTRADAS (traduzidas dos 4 posts do especialista, antes
+  de qualquer contato com os dados): R1 exaustão-macro (linha fora da box
+  com dline contra = operar CONTRA o macro); R2 cascata (D1 dline contra o
+  macro + H4/H1 confirmando = seguir D1); R3 peso-relativo (seguir o TF com
+  linha fora da box E ainda abrindo). Avaliação nos moldes do a5/a10:
+  3 baselines + reality check por permutação, dias research, holdout
+  intocado. Variações pós-hoc serão rotuladas como exploratórias.
+- Nota: honestidade sobre o prior — acc_z (primo da inclinação da linha)
+  e ML teto AUC ~0.5 já deram nulo; o a12 fecha a última porta fiel à
+  tese "só com CSS", não reabre as anteriores.
+- Dado bruto: re-export s0 bloqueado por "Máx. barras no gráfico"=100k no
+  terminal (copy_rates_range Invalid params; M5 só até 2025-03). Usuário
+  subiu o limite; re-export ok (28 pares, M5 2a + D1 7a). Fuso re-verificado
+  no novo export: exceções = semanas de DST dos EUA e feriados, nenhum
+  deslocamento uniforme — evidência anexada ao `_meta.json`.
+
+## 2026-07-06 — a12 executado: **RESULTADO NULO** (results/*_a12)
+
+Código congelado em commit ANTES da primeira execução. Dois universos:
+usd7 (fiel ao indicador do usuário) e all28 (sensibilidade).
+
+- Contraste: maior d de Cohen 0.10 (MN_dist_box/dline) — nada separa
+  rotulados de não-rotulados, mesmo padrão do a5.
+- Regras pré-registradas (395 dias research): R1 10.1/11.8% top-1,
+  R2 13.9/14.9%, R3 10.6/10.9% — nenhuma sobrevive. No all28 a R2 passa
+  dos baselines por 0.4pp mas fica ABAIXO do p95 permutado (15.7%) —
+  exatamente o tipo de falso positivo que o reality check existe para matar.
+- Teto de ML sobre a geometria: AUC 0.503–0.518 — sem sinal.
+- Conclusão: a geometria literal do CSS clássico (ranking por barra, box
+  ±0.2, inclinação da linha) TAMBÉM não prevê o rótulo em T0. A tese
+  "identifica só com o CSS" está agora refutada nas duas formulações
+  possíveis (features estatísticas E geometria literal). Restam, como
+  hipóteses vivas: informação fora do gráfico (calendário/fundamentos —
+  nunca testada) ou decisão em horário ≠ T0.
+
 ## Pendente
 
 - `a7_final_test.py` (holdout, últimos ~20% dos dias): NÃO executado. Roda
