@@ -246,3 +246,33 @@ Três execuções (usd7 15h primária; all28 15h e usd7 12h sensibilidades),
   1ª ordem, 2ª ordem e a janela operacional dele estão todas testadas e
   nulas. Próximo passo racional: a auditoria prospectiva acima — medir o
   hit rate REAL das chamadas antes de reverter mais qualquer coisa.
+
+## 2026-07-06 — Cssm.mq5 v1.41: janelas por horizonte temporal (WM_HOURS)
+
+Mudança de FERRAMENTA (indicador de leitura), não de metodologia da
+pesquisa — nenhuma fase, rótulo ou script Python é afetado.
+
+- **Motivação**: com janela fixa em barras (w=64) o horizonte temporal
+  varia selvagemente entre TFs (M30: 32h; H1: 2,7 dias; H4: 10,7 dias) —
+  o indicador "procura tendências remotas" nos TFs curtos e a grade MTF
+  compara coisas incomparáveis.
+- Novo modo `WM_HOURS` (default): o usuário declara o horizonte de
+  DETECÇÃO em horas (18h; perfil tendência absoluta 12-24h) e um
+  horizonte de CONTEXTO (120h). Conversão por TF com piso estatístico
+  de 16 barras → camadas: M15:72/M30:36/H1:18 detecção; H4:30 contexto;
+  D1/W1/MN estruturais (w=64 legado). Derivados w_fast=max(4,w/4),
+  z_win=clamp(8w,150,500).
+- Portões t auto-calibrados (`InpAutoGates`): interpolação linear da
+  tabela de calibração v1.40 (random walk, FP 5%/20%) pela janela
+  efetiva de CADA TF — índice, grade MTF e camada relacional sempre com
+  a régua da própria janela (antes a grade usava gate de w=64 com
+  qualquer w).
+- Grade MTF passa a calcular cada TF com a SUA janela efetiva; cabeçalho
+  das colunas marca a camada (sufixo ᵈ/ᶜ/ˢ + dimming) e o painel ganha a
+  linha "lente:" — um TF estrutural nunca deve ser lido como se
+  detectasse o dia (piso de 16 barras em H4 = 2,7 dias é RESOLUÇÃO, não
+  defeito).
+- `WM_BARS` preserva o v1.40 byte a byte (inputs legados valem);
+  Journal imprime tabela de conversão, verificação do GateFor (nós
+  exatos + monotonicidade) e tempo do Recalc inicial. Anti-repaint,
+  alertas em barra fechada e idade dos estados intactos.
