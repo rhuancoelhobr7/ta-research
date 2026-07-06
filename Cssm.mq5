@@ -32,6 +32,32 @@
 //|     para a janela InpWMid. Se mudar InpWMid, ajuste InpPairGate: |
 //|       w=16 -> 2.90 | w=24 -> 2.51 | w=32 -> 2.35                 |
 //|       w=48 -> 2.21 | w=64 -> 2.13                                |
+//|     (v1.41: InpAutoGates aplica esta tabela automaticamente via  |
+//|      GateFor, interpolando pela janela efetiva.)                 |
+//|                                                                  |
+//|  v1.41 (janelas por HORIZONTE temporal — modo WM_HOURS):         |
+//|   - MOTIVACAO: com janela fixa em barras (w=64) o horizonte      |
+//|     temporal varia selvagemente entre TFs (M30: 32h; H1: 2,7d;   |
+//|     H4: 10,7d) — o indicador "procura tendencias remotas" nos    |
+//|     TFs curtos e a grade MTF compara coisas incomparaveis.       |
+//|   - InpHorizonHours define O QUE se procura (DETECCAO; perfil    |
+//|     "tendencia absoluta": 12-24h). InpContextHours (~5 dias)     |
+//|     cobre TFs cuja barra e grande demais p/ a deteccao. Piso     |
+//|     estatistico: 16 barras. Camadas com defaults (18h/120h):     |
+//|       M15 w=72 det | M30 w=36 det | H1 w=18 det                  |
+//|       H4  w=30 ctx | D1 / W1 / MN w=64 ESTRUTURAL (legado)       |
+//|     Derivados: w_fast=max(4,w/4); z_win=clamp(8w,150,500).       |
+//|   - Por que H4 NAO detecta fenomenos de 12-24h: o piso de 16     |
+//|     barras em H4 = 2,7 dias — e RESOLUCAO estatistica, nao       |
+//|     defeito. H4 contextualiza (120h = 30 barras); D1+ dao a      |
+//|     estrutura. A grade marca a camada no cabecalho (d/c/s) e o   |
+//|     painel mostra a lente efetiva. NUNCA leia um TF estrutural   |
+//|     como se detectasse o horizonte do dia.                       |
+//|   - InpAutoGates: t_gate/t_low interpolados da tabela de         |
+//|     calibracao (random walk, FP 5%/20%) pela janela efetiva de   |
+//|     CADA TF — motor do grafico, grade MTF e camada relacional    |
+//|     sempre com a regua da propria janela.                        |
+//|   - WM_BARS = comportamento v1.40 EXATO (inputs legados valem).  |
 //|                                                                  |
 //|  IMPORTANTE: este indicador NÃO gera sinal de entrada.           |
 //|  Estudo de evento (26k eventos) rejeitou continuação nestes      |
@@ -46,8 +72,8 @@
 //|  Barra em formação (shift 0) = cópia cosmética da última fechada.|
 //+------------------------------------------------------------------+
 #property copyright "Carlos — motor CSSM (validado por estudo de evento)"
-#property version   "1.40"
-#property description "+ camada relacional (matriz 8x8, breadth, deteccao de forca espuria)"
+#property version   "1.41"
+#property description "+ janelas por horizonte temporal (WM_HOURS) + camada relacional (matriz 8x8, breadth)"
 #property indicator_separate_window
 #property indicator_buffers 40
 #property indicator_plots   8
@@ -77,16 +103,26 @@
 #property indicator_label8 "NZD"
 #property indicator_color8 clrAqua
 
+//--- inputs: modo de janela (v1.41 — horizonte temporal; ver cabeçalho)
+enum ENUM_WINDOW_MODE
+  {
+   WM_BARS,   // Barras fixas (v1.40 exato)
+   WM_HOURS   // Horizonte em horas (janela por TF)
+  };
+input ENUM_WINDOW_MODE InpWindowMode = WM_HOURS; // modo de janela (BARS = comportamento v1.40 exato)
+input double InpHorizonHours  = 18;   // horizonte de DETECÇÃO em horas (perfil tendência absoluta: 12-24h)
+input double InpContextHours  = 120;  // horizonte de CONTEXTO em horas (~5 dias) p/ TFs que não alcançam a detecção
+input bool   InpAutoGates     = true; // portões t auto-calibrados pela janela efetiva (só modo HOURS)
 //--- inputs: motor
 input ENUM_TIMEFRAMES InpTF      = PERIOD_CURRENT; // TF do cálculo (= TF do gráfico p/ linhas alinhadas)
-input int    InpWFast   = 16;    // janela rápida (barras)
-input int    InpWMid    = 64;    // janela média (barras) — base das features
-input int    InpZWin    = 500;   // janela do z-score adaptativo
+input int    InpWFast   = 16;    // janela rápida (barras) — modo BARS; em HOURS deriva max(4,w_mid/4)
+input int    InpWMid    = 64;    // janela média (barras) — modo BARS; em HOURS deriva do horizonte
+input int    InpZWin    = 500;   // janela do z-score — modo BARS; em HOURS deriva clamp(8*w_mid,150,500)
 input int    InpBars    = 300;   // barras a plotar
 input int    InpAccSpan = 8;     // suavização EMA da aceleração
 //--- inputs: máquina de estados
-input double InpTGate   = 2.0;   // t mínimo p/ Madura
-input double InpTLow    = 1.0;   // t mínimo p/ Emergindo
+input double InpTGate   = 2.0;   // t mínimo p/ Madura — modo BARS ou HOURS c/ AutoGates=false
+input double InpTLow    = 1.0;   // t mínimo p/ Emergindo — modo BARS ou HOURS c/ AutoGates=false
 input double InpPersist = 0.55;  // persistência mínima p/ Madura
 input double InpAccEmg  = 0.75;  // |z aceleração| p/ Emergindo
 input double InpCxExh   = -1.0;  // z convexidade contra tendência p/ Exausta
@@ -101,10 +137,11 @@ input int    InpFont      = 9;     // fonte
 input bool   InpAlerts    = false; // alertar mudança de estado (barra fechada)
 //--- inputs: camada relacional (v1.40 — DESCRITIVA; ver cabeçalho)
 input bool   InpRelational   = true;   // camada relacional (matriz + breadth)
-input double InpPairGate     = 2.13;   // |t| p/ tendência confirmada no PAR (w=64; calibrado p/ ~5% FP)
-input double InpPairGateLow  = 1.28;   // |t| baixo do par (~20% de excedência)
+input double InpPairGate     = 2.13;   // |t| p/ tendência confirmada no PAR — modo BARS ou AutoGates=false
+input double InpPairGateLow  = 1.28;   // |t| baixo do par — modo BARS ou AutoGates=false
 input bool   InpAlertBreadth = false;  // alerta quando breadth_hard >= 6/7 (barra fechada)
-// gates calibrados por InpWMid: 16->2.90 | 24->2.51 | 32->2.35 | 48->2.21 | 64->2.13
+// gates calibrados por w: 16->2.90 | 24->2.51 | 32->2.35 | 48->2.21 | 64->2.13
+// (v1.41: em HOURS c/ AutoGates, GateFor(w efetivo) substitui os dois acima)
 //--- inputs: grade multi-timeframe
 input bool   InpMTF = true;                    // grade multi-timeframe no painel
 input ENUM_TIMEFRAMES InpGT1 = PERIOD_M30;     // MTF 1
@@ -183,6 +220,13 @@ string   PPFX="CSSM_p_";      // objetos do painel-normal (grupo alternável)
 string   MPFX="CSSM_mx_";     // objetos da aba MATRIZ
 datetime gLastBar=0;
 
+//--- v1.41: parâmetros efetivos do motor do TF do gráfico (em WM_BARS
+//    recebem exatamente os inputs legados — comportamento v1.40)
+int    gWMid=64, gWFast=16, gZWin=500, gLayer=-1;
+double gTGate=2.0, gTLow=1.0, gPairGate=2.13, gPairLow=1.28;
+string gLens="";              // lente efetiva da grade (linha de status)
+bool   gPerfLogged=false;     // log do tempo de Recalc (só 1ª barra)
+
 //+------------------------------------------------------------------+
 ENUM_TIMEFRAMES Rtf(ENUM_TIMEFRAMES tf){ return (tf==PERIOD_CURRENT)?(ENUM_TIMEFRAMES)_Period:tf; }
 string TfStr(ENUM_TIMEFRAMES tf){ string s=EnumToString(Rtf(tf)); StringReplace(s,"PERIOD_",""); return s; }
@@ -204,6 +248,88 @@ string Arr(double z)
    if(z<=-1.5) return dn+dn;
    if(z<=-0.5) return dn+" ";
    return "- ";
+}
+
+//+------------------------------------------------------------------+
+//| v1.41 — janela efetiva por TF (conversão horizonte -> barras)     |
+//| Camadas: DETECÇÃO (o horizonte cabe em >=16 barras do TF),        |
+//| CONTEXTO (idem p/ InpContextHours), ESTRUTURAL (w=64 legado —     |
+//| W1/MN caem aqui). Piso de 16 barras = resolução estatística do    |
+//| t Newey-West, não é ajustável sem recalibrar os portões.          |
+//+------------------------------------------------------------------+
+#define WLAYER_DET 0
+#define WLAYER_CTX 1
+#define WLAYER_STR 2
+#define WFLOOR     16
+
+struct SWin
+  {
+   int    wMid;     // janela média efetiva
+   int    wFast;    // janela rápida derivada
+   int    zWin;     // janela do z-score derivada
+   int    layer;    // WLAYER_*; -1 = modo BARS (sem camada)
+   double tGate;    // portão t p/ Madura
+   double tLow;     // portão t baixo (Emergindo)
+  };
+
+//--- tabela de calibração (random walks, FP 5% / 20% — a mesma do
+//    cabeçalho v1.40, agora aplicada por interpolação)
+int    GATE_W[5]  = {16,24,32,48,64};
+double GATE_HI[5] = {2.896,2.511,2.350,2.205,2.134};
+double GATE_LO[5] = {1.692,1.527,1.460,1.397,1.280};
+
+//--- interpolação linear entre os nós; abaixo de 16 não existe (o piso
+//    WFLOOR impede); acima de 64 mantém o nó 64 (curva assintótica)
+double GateFor(int w,bool low)
+{
+   if(w<=GATE_W[0]) return low? GATE_LO[0]:GATE_HI[0];
+   if(w>=GATE_W[4]) return low? GATE_LO[4]:GATE_HI[4];
+   for(int i=0;i<4;i++)
+      if(w<=GATE_W[i+1])
+      {
+         double f=(double)(w-GATE_W[i])/(double)(GATE_W[i+1]-GATE_W[i]);
+         return low? GATE_LO[i]+f*(GATE_LO[i+1]-GATE_LO[i])
+                   : GATE_HI[i]+f*(GATE_HI[i+1]-GATE_HI[i]);
+      }
+   return low? GATE_LO[4]:GATE_HI[4];
+}
+
+//--- função central: parâmetros efetivos de um TF qualquer
+void WinFor(ENUM_TIMEFRAMES tf,SWin &o)
+{
+   if(InpWindowMode==WM_BARS)
+   {
+      o.wMid=InpWMid; o.wFast=InpWFast; o.zWin=InpZWin;
+      o.layer=-1; o.tGate=InpTGate; o.tLow=InpTLow;
+      return;
+   }
+   double tf_h=PeriodSeconds(Rtf(tf))/3600.0;
+   int bars_det=(int)MathRound(InpHorizonHours/tf_h);
+   if(bars_det>=WFLOOR){ o.wMid=(int)MathMin(bars_det,96); o.layer=WLAYER_DET; }
+   else
+   {
+      int bars_ctx=(int)MathRound(InpContextHours/tf_h);
+      if(bars_ctx>=WFLOOR){ o.wMid=(int)MathMin(bars_ctx,96); o.layer=WLAYER_CTX; }
+      else                { o.wMid=64;                        o.layer=WLAYER_STR; }
+   }
+   o.wFast=MathMax(4,o.wMid/4);
+   o.zWin=(int)MathMin(MathMax(8.0*o.wMid,150.0),500.0);
+   if(InpAutoGates){ o.tGate=GateFor(o.wMid,false); o.tLow=GateFor(o.wMid,true); }
+   else            { o.tGate=InpTGate;              o.tLow=InpTLow; }
+}
+string LayerSfx(int layer)
+{
+   if(layer==WLAYER_DET) return ShortToString(0x1D48);   // sobrescrito d
+   if(layer==WLAYER_CTX) return ShortToString(0x1D9C);   // sobrescrito c
+   if(layer==WLAYER_STR) return ShortToString(0x02E2);   // sobrescrito s
+   return "";
+}
+string LayerName(int layer)
+{
+   if(layer==WLAYER_DET) return "DETECCAO";
+   if(layer==WLAYER_CTX) return "CONTEXTO";
+   if(layer==WLAYER_STR) return "ESTRUTURAL";
+   return "BARS";
 }
 
 //+------------------------------------------------------------------+
@@ -295,18 +421,18 @@ int StateAt(int c,int k)
 {
    double t=gTmid[c*gLf+k], at=MathAbs(t);
    double dir=(t>0?1.0:(t<0?-1.0:0.0));
-   double sdC=SerStd(gConv,c,gLf,k,InpZWin);
-   double sdA=SerStd(gAcc, c,gLf,k,InpZWin);
+   double sdC=SerStd(gConv,c,gLf,k,gZWin);
+   double sdA=SerStd(gAcc, c,gLf,k,gZWin);
    double cxz=(sdC>0)? gConv[c*gLf+k]/sdC : 0.0;
    double acz=(sdA>0)? gAcc[c*gLf+k]/sdA : 0.0;
    if(k==0) gAccZ0[c]=acz;
    double cx=cxz*dir, ac=acz*dir, pers=gPers[c*gLf+k];
 
    int st=ST_NOISE;
-   bool emerging=(at<InpTGate && at>=InpTLow && MathAbs(acz)>=InpAccEmg &&
+   bool emerging=(at<gTGate && at>=gTLow && MathAbs(acz)>=InpAccEmg &&
                   ((gAcc[c*gLf+k]>0 && gMomF[c*gLf+k]>0)||(gAcc[c*gLf+k]<0 && gMomF[c*gLf+k]<0)));
-   bool mature  =(at>=InpTGate && pers>=InpPersist);
-   bool exhaust =(at>=InpTGate && cx<=InpCxExh && ac<=InpAcExh);
+   bool mature  =(at>=gTGate && pers>=InpPersist);
+   bool exhaust =(at>=gTGate && cx<=InpCxExh && ac<=InpAcExh);
    if(emerging) st=ST_EMERGING;
    if(mature)   st=ST_MATURE;
    if(exhaust)  st=ST_EXHAUSTED;
@@ -318,8 +444,8 @@ bool Compute()
 {
    ENUM_TIMEFRAMES tf=Rtf(InpTF);
    gLs=InpBars;
-   gLf=InpBars+InpZWin;
-   gLi=gLf+InpWMid+2;
+   gLf=InpBars+gZWin;
+   gLi=gLf+gWMid+2;
    int W=gLi+2;
 
    ArrayResize(gIdx,8*gLi); ArrayInitialize(gIdx,0.0);
@@ -363,12 +489,12 @@ bool Compute()
    {
       for(int k=gLf-1;k>=0;k--)
       {
-         gTmid[c*gLf+k]=TStat(c,k,InpWMid);
-         gER[c*gLf+k]  =EffRatio(c,k,InpWMid);
-         gMomF[c*gLf+k]=VolMom(c,k,InpWFast);
-         gMomM[c*gLf+k]=VolMom(c,k,InpWMid);
-         gPers[c*gLf+k]=Persist(c,k,InpWMid);
-         gConv[c*gLf+k]=Convex(c,k,InpWMid);
+         gTmid[c*gLf+k]=TStat(c,k,gWMid);
+         gER[c*gLf+k]  =EffRatio(c,k,gWMid);
+         gMomF[c*gLf+k]=VolMom(c,k,gWFast);
+         gMomM[c*gLf+k]=VolMom(c,k,gWMid);
+         gPers[c*gLf+k]=Persist(c,k,gWMid);
+         gConv[c*gLf+k]=Convex(c,k,gWMid);
          double t=gTmid[c*gLf+k];
          gM[c*gLf+k]=(t>0?1.0:(t<0?-1.0:0.0))*MathMin(MathAbs(t)/2.0,1.0)*gER[c*gLf+k];
       }
@@ -430,14 +556,14 @@ bool PairCellOk(int a,int b)
 int PairStateAbs(double t)
 {
    double at=MathAbs(t);
-   if(at>=InpPairGate)    return ST_MATURE;
-   if(at>=InpPairGateLow) return ST_EMERGING;
+   if(at>=gPairGate) return ST_MATURE;
+   if(at>=gPairLow)  return ST_EMERGING;
    return ST_NOISE;
 }
 bool Spurious(int c,int k)
 {
    if(!RelActive()) return false;
-   return (MathAbs(gTmid[c*gLf+k])>=InpTGate && gBrHard[c*gLs+k]<3.0/7.0);
+   return (MathAbs(gTmid[c*gLf+k])>=gTGate && gBrHard[c*gLs+k]<3.0/7.0);
 }
 
 void SelfTestAntisym()
@@ -451,18 +577,18 @@ void SelfTestAntisym()
       if(MathAbs(tab+tba)>1e-12)
       {
          ok=false;
-         Print(StringFormat("CSSM v1.40: ANTISSIMETRIA FALHOU em %s: t(%s,%s)=%.6f t(%s,%s)=%.6f",
+         Print(StringFormat("CSSM v1.41: ANTISSIMETRIA FALHOU em %s: t(%s,%s)=%.6f t(%s,%s)=%.6f",
                gPair[p],cur[a],cur[b],tab,cur[b],cur[a],tba));
       }
       tested++;
    }
-   if(ok) Print(StringFormat("CSSM v1.40: antissimetria OK (%d pares amostrados).",tested));
+   if(ok) Print(StringFormat("CSSM v1.41: antissimetria OK (%d pares amostrados).",tested));
 }
 
 bool ComputePairs()
 {
    ulong us0=GetMicrosecondCount();
-   gLp=gLs+InpWMid+2;
+   gLp=gLs+gWMid+2;
    int W=gLp+2;
    ArrayResize(gPairT,  gPairsN*gLp); ArrayInitialize(gPairT,0.0);
    ArrayResize(gPairER, gPairsN*gLp); ArrayInitialize(gPairER,0.0);
@@ -485,8 +611,8 @@ bool ComputePairs()
       if(bad) continue;
       for(int k=0;k<gLs;k++)
       {
-         gPairT[p*gLp+k] =TStatSer(gPairLog,p*gLp,gLp,k,InpWMid);
-         gPairER[p*gLp+k]=EffRatioSer(gPairLog,p*gLp,gLp,k,InpWMid);
+         gPairT[p*gLp+k] =TStatSer(gPairLog,p*gLp,gLp,k,gWMid);
+         gPairER[p*gLp+k]=EffRatioSer(gPairLog,p*gLp,gLp,k,gWMid);
       }
       gPairOk[p]=true; good++;
    }
@@ -513,7 +639,7 @@ bool ComputePairs()
             else if(gQuoteIdx[p]==c) tor=-gPairT[p*gLp+k];
             else continue;
             n++;
-            if(d!=0.0 && tor*d>0){ ns++; if(tor*d>=InpPairGate) nh++; }
+            if(d!=0.0 && tor*d>0){ ns++; if(tor*d>=gPairGate) nh++; }
          }
          if(n>0)
          {
@@ -525,14 +651,14 @@ bool ComputePairs()
    gRelMs=(GetMicrosecondCount()-us0)/1000.0;
    if(!gRelLogged)
    {
-      Print(StringFormat("CSSM v1.40: ComputePairs() em %.1f ms (%d pares, w=%d).",
-            gRelMs,good,InpWMid));
+      Print(StringFormat("CSSM v1.41: ComputePairs() em %.1f ms (%d pares, w=%d, gate=%.3f/%.3f).",
+            gRelMs,good,gWMid,gPairGate,gPairLow));
       gRelLogged=true;
    }
    if(gRelMs>200.0)
    {
       gRelSlow=true;   // desliga a camada nas próximas barras; aviso no painel
-      Print("CSSM v1.40: camada relacional DESLIGADA (ComputePairs > 200 ms).");
+      Print("CSSM v1.41: camada relacional DESLIGADA (ComputePairs > 200 ms).");
    }
    return true;
 }
@@ -566,18 +692,21 @@ void CheckBreadthAlerts()
 bool ComputeGridTF(int gi)
 {
    ENUM_TIMEFRAMES tf=gGTF[gi];
+   // v1.41: janela efetiva do PRÓPRIO TF (antes a grade herdava o
+   // InpWMid único do gráfico e comparava horizontes incomparáveis)
+   SWin gw; WinFor(tf,gw);
    // disponibilidade: menor histórico entre os pares utilizáveis
    int minA=2147483647, okp=0;
    for(int p=0;p<gPairsN;p++)
    {
       int b=Bars(gPair[p],tf);
-      if(b>=InpWMid+160){ okp++; if(b<minA) minA=b; }
+      if(b>=gw.wMid+160){ okp++; if(b<minA) minA=b; }
    }
    if(okp<gPairsN/2) return false;
-   int zw=MathMin(InpZWin, minA-InpWMid-10);
+   int zw=MathMin(gw.zWin, minA-gw.wMid-10);
    if(zw<150) return false;
 
-   int Lf=zw, Li=Lf+InpWMid+2, W=Li+2;
+   int Lf=zw, Li=Lf+gw.wMid+2, W=Li+2;
    gLi=Li;   // funções de feature leem gIdx/gLi
    ArrayResize(gIdx,8*Li); ArrayInitialize(gIdx,0.0);
    double ret[]; ArrayResize(ret,8*(Li-1)); ArrayInitialize(ret,0.0);
@@ -617,9 +746,9 @@ bool ComputeGridTF(int gi)
    {
       for(int k=Lf-1;k>=0;k--)
       {
-         cv[c*Lf+k]=Convex(c,k,InpWMid);
-         mf[c*Lf+k]=VolMom(c,k,InpWFast);
-         mm[c*Lf+k]=VolMom(c,k,InpWMid);
+         cv[c*Lf+k]=Convex(c,k,gw.wMid);
+         mf[c*Lf+k]=VolMom(c,k,gw.wFast);
+         mm[c*Lf+k]=VolMom(c,k,gw.wMid);
       }
       double ema=mf[c*Lf+(Lf-1)]-mm[c*Lf+(Lf-1)];
       ac[c*Lf+(Lf-1)]=ema;
@@ -633,18 +762,18 @@ bool ComputeGridTF(int gi)
    // estado k=0 por moeda (mesma lógica do TF principal)
    for(int c=0;c<8;c++)
    {
-      double t=TStat(c,0,InpWMid), at=MathAbs(t);
+      double t=TStat(c,0,gw.wMid), at=MathAbs(t);
       double dir=(t>0?1.0:(t<0?-1.0:0.0));
-      double pers=Persist(c,0,InpWMid);
+      double pers=Persist(c,0,gw.wMid);
       double sdC=SerStd(cv,c,Lf,0,zw), sdA=SerStd(ac,c,Lf,0,zw);
       double cxz=(sdC>0)? cv[c*Lf+0]/sdC : 0.0;
       double acz=(sdA>0)? ac[c*Lf+0]/sdA : 0.0;
       double cx=cxz*dir, a2=acz*dir;
       int stt=ST_NOISE;
-      bool emerging=(at<InpTGate && at>=InpTLow && MathAbs(acz)>=InpAccEmg &&
+      bool emerging=(at<gw.tGate && at>=gw.tLow && MathAbs(acz)>=InpAccEmg &&
                      ((ac[c*Lf+0]>0 && mf[c*Lf+0]>0)||(ac[c*Lf+0]<0 && mf[c*Lf+0]<0)));
-      bool mature  =(at>=InpTGate && pers>=InpPersist);
-      bool exhaust =(at>=InpTGate && cx<=InpCxExh && a2<=InpAcExh);
+      bool mature  =(at>=gw.tGate && pers>=InpPersist);
+      bool exhaust =(at>=gw.tGate && cx<=InpCxExh && a2<=InpAcExh);
       if(emerging) stt=ST_EMERGING;
       if(mature)   stt=ST_MATURE;
       if(exhaust)  stt=ST_EXHAUSTED;
@@ -899,8 +1028,9 @@ void DrawPanel()
    int win=ChartWindowFind(); if(win<0) return;
 
    bool rel=RelActive();                    // v1.40: camada relacional ativa
-   static int prevLayout=-1;                // -1 nunca, 0 sem rel, 1 com rel
-   int layout=rel?1:0;
+   bool lens=(InpWindowMode==WM_HOURS && gLens!="");   // v1.41: linha da lente
+   static int prevLayout=-1;                // -1 nunca; bit0 rel, bit1 lente
+   int layout=(rel?1:0)+(lens?2:0);
    if(prevLayout!=-1 && prevLayout!=layout) ObjectsDeleteAll(0,PPFX);
    prevLayout=layout;
 
@@ -920,16 +1050,28 @@ void DrawPanel()
    int chpx=(InpFont*7)/9; if(chpx<5) chpx=5;   // avanço aprox. Consolas
 
    bool foot2=(rel || (InpRelational && gRelSlow));
-   Rect(PPFX+"bg",win,x-6,y-6,colW,rh*(foot2?12:11)+16,C'24,24,32',C'80,80,90');
-   Lbl(PPFX+"hd",win,x,y,StringFormat("CSSM CONTEXTO  %s",TfStr(InpTF)),clrWhiteSmoke);
+   int nrows=11+(foot2?1:0)+(lens?1:0);
+   Rect(PPFX+"bg",win,x-6,y-6,colW,rh*nrows+16,C'24,24,32',C'80,80,90');
+   string hdr=StringFormat("CSSM CONTEXTO  %s",TfStr(InpTF));
+   if(InpWindowMode==WM_HOURS) hdr+=StringFormat("  w=%d%s",gWMid,LayerSfx(gLayer));
+   Lbl(PPFX+"hd",win,x,y,hdr,clrWhiteSmoke);
    Lbl(PPFX+"hd2",win,x+colRest,y+rh," DIR    M      t   pers acc",C'150,150,150');
    Lbl(PPFX+"hd3",win,x+colState,y+rh,"ESTADO(idade)",C'150,150,150');
    if(rel) Lbl(PPFX+"hdA",win,x+colAmp,y+rh,"amp",C'150,150,150');
    if(InpMTF)
    {
-      string gh="";
-      for(int i=0;i<6;i++) gh+=StringFormat("%-3s",TfShort(gGTF[i]));
-      Lbl(PPFX+"hd4",win,x+colGrid,y+rh,gh,C'150,150,150');
+      // v1.41: cabeçalho por coluna com marcador de camada (sufixo d/c/s
+      // sobrescrito + texto progressivamente mais apagado). Um TF
+      // ESTRUTURAL nunca deve ser lido como se detectasse o horizonte.
+      for(int i=0;i<6;i++)
+      {
+         SWin hw; WinFor(gGTF[i],hw);
+         color hc=C'150,150,150';
+         if(hw.layer==WLAYER_CTX)      hc=C'122,122,130';
+         else if(hw.layer==WLAYER_STR) hc=C'96,96,104';
+         Lbl(PPFX+"hd4_"+(string)i,win,x+colGrid+i*cellW,y+rh,
+             TfShort(gGTF[i])+LayerSfx(hw.layer),hc);
+      }
       Lbl(PPFX+"hd5",win,x+colAlin,y+rh,"alin",C'150,150,150');
    }
 
@@ -1022,13 +1164,23 @@ void DrawPanel()
       }
    }
    Lbl(PPFX+"ft",win,x,y+rh*10+4,"contexto, nao e sinal de entrada",C'150,120,120');
+   int fr=11;
    if(rel)
-      Lbl(PPFX+"ft2",win,x,y+rh*11+4,
+   {
+      Lbl(PPFX+"ft2",win,x,y+rh*fr+4,
           ShortToString(0x26A0)+" = indice ativo sem confirmacao dos pares (<3/7)",
           C'150,120,120');
+      fr++;
+   }
    else if(InpRelational && gRelSlow)
-      Lbl(PPFX+"ft2",win,x,y+rh*11+4,
+   {
+      Lbl(PPFX+"ft2",win,x,y+rh*fr+4,
           "camada relacional OFF (ComputePairs > 200 ms)",clrOrange);
+      fr++;
+   }
+   // v1.41: lente efetiva — o que cada TF da grade realmente enxerga
+   if(lens)
+      Lbl(PPFX+"ft3",win,x,y+rh*fr+4,"lente: "+gLens,C'120,140,160');
 }
 
 //+------------------------------------------------------------------+
@@ -1052,7 +1204,7 @@ void DrawMatrix()
 
    Rect(MPFX+"bg",win,x-6,y-6,colW,rh*12+16,C'24,24,32',C'80,80,90');
    Lbl(MPFX+"hd",win,x,y,
-       StringFormat("CSSM MATRIZ 8x8  %s  (t do PAR, w=%d)",TfStr(InpTF),InpWMid),
+       StringFormat("CSSM MATRIZ 8x8  %s  (t do PAR, w=%d)",TfStr(InpTF),gWMid),
        clrWhiteSmoke);
 
    for(int b=0;b<8;b++)
@@ -1103,7 +1255,7 @@ void DrawMatrix()
    if(lead>=0)
    {
       int hN=(int)MathRound(bh*7.0);
-      // dominância: retorno log orientado de cada par do líder em InpWMid barras
+      // dominância: retorno log orientado de cada par do líder em gWMid barras (janela efetiva)
       double rets[8]; int  vsIdx[8]; int nd=0; double tot=0.0;
       for(int p=0;p<gPairsN;p++)
       {
@@ -1112,8 +1264,8 @@ void DrawMatrix()
          if(gBaseIdx[p]==lead){ o=gQuoteIdx[p]; sgn=1.0; }
          else if(gQuoteIdx[p]==lead){ o=gBaseIdx[p]; sgn=-1.0; }
          else continue;
-         if(InpWMid>=gLp) continue;
-         double r=sgn*(gPairLog[p*gLp+0]-gPairLog[p*gLp+InpWMid]);
+         if(gWMid>=gLp) continue;
+         double r=sgn*(gPairLog[p*gLp+0]-gPairLog[p*gLp+gWMid]);
          rets[nd]=r; vsIdx[nd]=o; nd++; tot+=MathAbs(r);
       }
       for(int i=0;i<nd-1;i++) for(int j=i+1;j<nd;j++)
@@ -1197,12 +1349,12 @@ int OnInit()
       gPair[gPairsN]=sym; gBaseIdx[gPairsN]=bi; gQuoteIdx[gPairsN]=qi;
       gPairsN++; seen[key]=true;
    }
-   Print("CSSM_Contexto v1.40: ",gPairsN," pares detectados.");
+   Print("CSSM_Contexto v1.41: ",gPairsN," pares detectados.");
 
    DetectFocusPair();
    gFocus=InpFocusStart;
    gMtx=false; gMtxDirty=false;
-   gRelOk=false; gRelSlow=false; gRelLogged=false;
+   gRelOk=false; gRelSlow=false; gRelLogged=false; gPerfLogged=false;
    gPrevBHInit=false;
    for(int c=0;c<8;c++) gPrevBHHigh[c]=false;
 
@@ -1210,6 +1362,67 @@ int OnInit()
    gGTF[3]=InpGT4; gGTF[4]=InpGT5; gGTF[5]=InpGT6;
    for(int i=0;i<6;i++){ gGridOk[i]=false; gGridLast[i]=0; }
    ArrayInitialize(gGridSt,0); ArrayInitialize(gGridDir,0);
+
+   // v1.41: parâmetros efetivos do motor do gráfico (em WM_BARS recebem
+   // os inputs legados — critério de aceite nº 1: v1.40 byte a byte)
+   SWin wc; WinFor(InpTF,wc);
+   gWMid=wc.wMid; gWFast=wc.wFast; gZWin=wc.zWin; gLayer=wc.layer;
+   gTGate=wc.tGate; gTLow=wc.tLow;
+   if(InpWindowMode==WM_HOURS && InpAutoGates)
+   { gPairGate=GateFor(gWMid,false); gPairLow=GateFor(gWMid,true); }
+   else
+   { gPairGate=InpPairGate; gPairLow=InpPairGateLow; }
+
+   // lente efetiva da grade (linha de status do painel)
+   gLens="";
+   if(InpWindowMode==WM_HOURS)
+   {
+      string det="",ctx="",str="";
+      for(int i=0;i<6;i++)
+      {
+         SWin gw; WinFor(gGTF[i],gw);
+         string nm=TfShort(gGTF[i]);
+         if(gw.layer==WLAYER_DET)      det+=(det==""?"":" ")+nm+":"+IntegerToString(gw.wMid);
+         else if(gw.layer==WLAYER_CTX) ctx+=(ctx==""?"":" ")+nm+":"+IntegerToString(gw.wMid);
+         else                          str+=(str==""?"":" ")+nm;
+      }
+      gLens=StringFormat("%gh -> %s",InpHorizonHours,(det=="")?"(nenhum)":det);
+      if(ctx!="") gLens+=StringFormat(" | ctx%gh -> %s",InpContextHours,ctx);
+      if(str!="") gLens+=" | estr: "+str;
+   }
+
+   // v1.41: Journal — tabela de conversão (critério nº 2) e verificação
+   // do GateFor (critério nº 3), impressas uma vez no init
+   if(InpWindowMode==WM_HOURS)
+   {
+      Print(StringFormat("CSSM v1.41: modo HORAS — deteccao %gh, contexto %gh, piso %d barras.",
+            InpHorizonHours,InpContextHours,WFLOOR));
+      Print(StringFormat("CSSM v1.41: motor do grafico %s: w_mid=%d w_fast=%d z_win=%d camada=%s t=%.3f/%.3f par=%.3f/%.3f",
+            TfStr(InpTF),gWMid,gWFast,gZWin,LayerName(gLayer),gTGate,gTLow,gPairGate,gPairLow));
+      ENUM_TIMEFRAMES vtf[7]={PERIOD_M15,PERIOD_M30,PERIOD_H1,PERIOD_H4,PERIOD_D1,PERIOD_W1,PERIOD_MN1};
+      for(int i=0;i<7;i++)
+      {
+         SWin w; WinFor(vtf[i],w);
+         Print(StringFormat("CSSM v1.41:   %-3s w_mid=%2d w_fast=%2d z_win=%3d t_gate=%.3f t_low=%.3f [%s]",
+               TfStr(vtf[i]),w.wMid,w.wFast,w.zWin,w.tGate,w.tLow,LayerName(w.layer)));
+      }
+      bool nodes=true;
+      for(int i=0;i<5;i++)
+         if(MathAbs(GateFor(GATE_W[i],false)-GATE_HI[i])>1e-12 ||
+            MathAbs(GateFor(GATE_W[i],true )-GATE_LO[i])>1e-12) nodes=false;
+      bool mono=true; double ph=99.0,pl=99.0;
+      for(int w=WFLOOR;w<=96;w++)
+      {
+         double h=GateFor(w,false), l=GateFor(w,true);
+         if(h>ph+1e-12 || l>pl+1e-12) mono=false;
+         ph=h; pl=l;
+      }
+      Print(StringFormat("CSSM v1.41: GateFor — nos exatos: %s | interpolacao monotona 16..96: %s.",
+            nodes?"OK":"FALHOU",mono?"OK":"FALHOU"));
+      Print("CSSM v1.41: lente da grade: "+gLens);
+   }
+   else
+      Print("CSSM v1.41: modo BARRAS — janelas e portoes dos inputs (comportamento v1.40 exato).");
 
    IndicatorSetDouble(INDICATOR_MINIMUM,-0.6);
    IndicatorSetDouble(INDICATOR_MAXIMUM, 0.6);
@@ -1251,6 +1464,8 @@ void Recalc(int total,bool force=false)
          if(iTime(_Symbol,gGTF[i],0)!=gGridLast[i] || !gGridOk[i]){ gridNew=true; break; }
    if(!mainNew && !gridNew) return;
 
+   ulong usR=GetMicrosecondCount();   // v1.41: tempo total do 1º Recalc
+   bool didMain=false;
    if(mainNew)
    {
       if(!Compute())
@@ -1258,6 +1473,7 @@ void Recalc(int total,bool force=false)
          Comment("CSSM: aguardando historico dos pares...");
          return;
       }
+      didMain=true;
       Comment("");
       gLastBar=t0;
       // v1.40: camada relacional ANTES do FillBuffers (buffers 24-39 a
@@ -1272,6 +1488,12 @@ void Recalc(int total,bool force=false)
       FillBuffers(total);
    }
    UpdateGrid();
+   if(didMain && !gPerfLogged)
+   {
+      gPerfLogged=true;
+      Print(StringFormat("CSSM v1.41: Recalc inicial em %.1f ms (motor w=%d + pares + buffers + grade MTF).",
+            (GetMicrosecondCount()-usR)/1000.0,gWMid));
+   }
    ApplyFocus();
    int win=ChartWindowFind();
    if(win>=0){ DrawBtn(win); DrawEndLabels(win); }
