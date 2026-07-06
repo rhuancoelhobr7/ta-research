@@ -1,0 +1,154 @@
+{
+  "server_tz": "UTC+2 (inverno NA) / UTC+3 (verao NA), DST dos EUA; meia-noite do servidor = 17:00 NY (pre-Tokyo)",
+  "server_tz_verified_by_user": true,
+  "server_tz_evidence": {
+    "descricao": "verificacao programatica sobre EURUSD M5 (2 anos)",
+    "abertura_semanal": "todas as 104 segundas-feiras abrem 00:00 servidor (26 inverno + 26 verao conferidas)",
+    "fechamento_semanal": "todas as sextas fecham 23:55 servidor, inverno e verao",
+    "conclusao": "00:00 servidor == 17:00 NY o ano inteiro -> broker GMT+2/+3 com DST alinhado aos EUA",
+    "pendente": "RESOLVIDO: usuario confirmou fuso contra o grafico do MT5 em 2026-07-04"
+  },
+  "export_timestamp_utc": "2026-07-04T18:30Z (re-export D1 7a p/ MN v2)",
+  "exported": [
+    {
+      "symbol": "EURUSD",
+      "m5_bars": 148437,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "GBPUSD",
+      "m5_bars": 148450,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "USDJPY",
+      "m5_bars": 148468,
+      "d1_bars": 1818
+    },
+    {
+      "symbol": "USDCHF",
+      "m5_bars": 148469,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "USDCAD",
+      "m5_bars": 148472,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "AUDUSD",
+      "m5_bars": 148468,
+      "d1_bars": 1818
+    },
+    {
+      "symbol": "NZDUSD",
+      "m5_bars": 148467,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "EURGBP",
+      "m5_bars": 148467,
+      "d1_bars": 1818
+    },
+    {
+      "symbol": "EURJPY",
+      "m5_bars": 148468,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "EURCHF",
+      "m5_bars": 148460,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "EURCAD",
+      "m5_bars": 148467,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "EURAUD",
+      "m5_bars": 148454,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "EURNZD",
+      "m5_bars": 148466,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "GBPJPY",
+      "m5_bars": 148461,
+      "d1_bars": 1816
+    },
+    {
+      "symbol": "GBPCHF",
+      "m5_bars": 148465,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "GBPCAD",
+      "m5_bars": 148338,
+      "d1_bars": 1816
+    },
+    {
+      "symbol": "GBPAUD",
+      "m5_bars": 148466,
+      "d1_bars": 1816
+    },
+    {
+      "symbol": "GBPNZD",
+      "m5_bars": 147430,
+      "d1_bars": 1809
+    },
+    {
+      "symbol": "CHFJPY",
+      "m5_bars": 148103,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "CADJPY",
+      "m5_bars": 148466,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "AUDJPY",
+      "m5_bars": 148459,
+      "d1_bars": 1816
+    },
+    {
+      "symbol": "NZDJPY",
+      "m5_bars": 148465,
+      "d1_bars": 1816
+    },
+    {
+      "symbol": "CADCHF",
+      "m5_bars": 148463,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "AUDCHF",
+      "m5_bars": 148444,
+      "d1_bars": 1817
+    },
+    {
+      "symbol": "NZDCHF",
+      "m5_bars": 148462,
+      "d1_bars": 1816
+    },
+    {
+      "symbol": "AUDCAD",
+      "m5_bars": 148461,
+      "d1_bars": 1816
+    },
+    {
+      "symbol": "NZDCAD",
+      "m5_bars": 148467,
+      "d1_bars": 1818
+    },
+    {
+      "symbol": "AUDNZD",
+      "m5_bars": 148465,
+      "d1_bars": 1816
+    }
+  ]
+}

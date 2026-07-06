@@ -135,6 +135,37 @@ Compilado no MetaEditor: 0 erros, 0 warnings; regressão garantida com
 `InpRelational=false` (buffers 0-23 no caminho v1.30 intocado).
 `Export_CSSM_Parity.mq5` fecha o critério 6 (execução manual pendente).
 
+## 2026-07-06 — a12 (em andamento): geometria literal do CSS clássico
+
+Motivação: posts públicos do especialista indicam que o "score de inflação/
+deflação" seria a GEOMETRIA das linhas do CSS clássico (TMA-slope,
+normalizado por barra): dentro/fora da box ±0.2, linha ascendente/
+descendente, proximidade do zero — lida em MN/W1/D1/H4/H1. Isso NÃO foi
+testado literalmente: o cssm_engine usa features por-moeda (t, ER, M,
+acc_z), sem a normalização cross-sectional por barra (ranking relativo)
+nem a box literal.
+
+- `css_classic.py` + testes: porte fiel do CurrencySlopeStrength.mq5 do
+  usuário (TMA CAUSAL — a TMA centrada repinta e foi rejeitada), slope por
+  par, agregação por moeda, normalização por barra (mais forte = ±2*box).
+  Anti-lookahead travado em teste (normalização é cross-sectional na
+  MESMA barra; não vaza futuro).
+- HIPÓTESES PRÉ-REGISTRADAS (traduzidas dos 4 posts do especialista, antes
+  de qualquer contato com os dados): R1 exaustão-macro (linha fora da box
+  com dline contra = operar CONTRA o macro); R2 cascata (D1 dline contra o
+  macro + H4/H1 confirmando = seguir D1); R3 peso-relativo (seguir o TF com
+  linha fora da box E ainda abrindo). Avaliação nos moldes do a5/a10:
+  3 baselines + reality check por permutação, dias research, holdout
+  intocado. Variações pós-hoc serão rotuladas como exploratórias.
+- Nota: honestidade sobre o prior — acc_z (primo da inclinação da linha)
+  e ML teto AUC ~0.5 já deram nulo; o a12 fecha a última porta fiel à
+  tese "só com CSS", não reabre as anteriores.
+- Dado bruto: re-export s0 bloqueado por "Máx. barras no gráfico"=100k no
+  terminal (copy_rates_range Invalid params; M5 só até 2025-03). Usuário
+  orientado a subir o limite; `_meta.json` verificado preservado em
+  `_meta_verified_tz.bak.json` (s0 sobrescreve e a verificação de fuso é
+  irreversível).
+
 ## Pendente
 
 - `a7_final_test.py` (holdout, últimos ~20% dos dias): NÃO executado. Roda
