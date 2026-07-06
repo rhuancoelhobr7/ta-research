@@ -227,3 +227,22 @@ Pendente (fora deste commit): auditoria PROSPECTIVA das chamadas públicas
 do especialista (specialist_calls_v2.csv, coleta diária, 60-90 dias) para
 medir hit rate real na janela Tokyo→NY antes de gastar mais ciclos de
 engenharia reversa — os posts são ex-post e carregam viés de seleção.
+
+## 2026-07-06 — a13 executado: **RESULTADO NULO** (results/*_a13)
+
+Três execuções (usd7 15h primária; all28 15h e usd7 12h sensibilidades),
+395 dias research, holdout intocado:
+
+- Nenhuma regra sobrevive. Os dois quase-positivos morrem no reality
+  check: RB usd7 50.9% e RA all28 53.9% batem os baselines mas ficam
+  ABAIXO do p95 permutado (57.7% / 56.5%) — com 3 regras testadas contra
+  alvo binário, máximos dessa ordem saem de graça do acaso.
+- RC (amparo-D1) dispara em só 51-59 dias (n<100 = amostra insuficiente
+  por regra dura 6) e ainda assim fica abaixo de 50%.
+- ML teto sobre as 35 features de peso: AUC 0.500-0.520 — sem sinal.
+- Conclusão: a formulação "variação de intensidade + veto hierárquico +
+  janela Tokyo→NY declarada pelo especialista" TAMBÉM é nula. Com a5
+  (estado), a12 (posição/geometria) e a13 (derivada/peso), as leituras
+  1ª ordem, 2ª ordem e a janela operacional dele estão todas testadas e
+  nulas. Próximo passo racional: a auditoria prospectiva acima — medir o
+  hit rate REAL das chamadas antes de reverter mais qualquer coisa.
