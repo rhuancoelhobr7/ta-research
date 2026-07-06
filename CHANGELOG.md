@@ -276,3 +276,38 @@ pesquisa — nenhuma fase, rótulo ou script Python é afetado.
   Journal imprime tabela de conversão, verificação do GateFor (nós
   exatos + monotonicidade) e tempo do Recalc inicial. Anti-repaint,
   alertas em barra fechada e idade dos estados intactos.
+
+## 2026-07-06 — a15: ledger dos prints + autenticação contra o M5
+
+Motivação: o dono do repo tem prints quase diários dos stories do
+especialista (históricos MT5 de portfólios encerrados); 9 dias transcritos
+(19/06–06/07/2026, 63 pernas) em `specialist_ledger.csv` (append-only; não
+confundir com `specialist_calls.csv` imutável nem com o prospectivo do a14).
+
+Enquadramento honesto: o ledger NÃO mede hit rate preditivo — são trades
+encerrados publicados ex-post, vencedores por construção (seleção); hit
+rate é papel exclusivo do a14. "Consistente com preços reais" NÃO prova
+conta real nem skill (demo usa os mesmos preços). Restrição de holdout
+respeitada: os dias caem na região de holdout; `a15_ledger_check.py` lê
+APENAS closes M5 brutos (sem labels/splits/índices/regras — precedente
+a11 Etapa 3; travado em teste que inspeciona a AST do módulo).
+
+Resultado da autenticação (results/*_a15, tol 15bp preço / 3% lucro):
+
+- **profit reconstruído: 63/63 PASS** (conversão QUOTE→USD no carimbo);
+  **price_in plausível: 63/63 PASS**; price_out estrito: 48/63.
+- Dos 15 FAIL de price_out: as 7 pernas de 22/06 desviam 17–34bp no
+  horário do print mas convergem UNIFORMEMENTE com offset de relógio
+  **+3h** (0.9–3.5bp) — consistente com print em UTC+0 vs servidor UTC+3.
+  As 8 restantes (23–25/06) são marginais (15–31bp) com offsets mistos —
+  inconclusivas (spread/granularidade M5/revisita de nível).
+- Somas por dia: 8/9 batem o total_print a ±0.02. **02/07 FALHA por
+  −966.06 (0.5%)**: único portfólio de 2 dias — compatível com swap/
+  comissão de overnight incluídos no total do MT5 e ausentes do P/L puro
+  de preço das pernas. Achado registrado; CSV não editado.
+- Perna PERDEDORA publicada em 24/06 (USDJPY, −5.342,44) — existe, mas
+  1 em 63 não mitiga o viés de seleção dos dias/portfólios publicados.
+- Cobertura: 9 de 12 dias úteis do intervalo; faltam 26/06 e 03/07
+  (sextas) e 01/07.
+- Veredito: prints AUTÊNTICOS quanto a preços (nível de mercado real);
+  autenticidade ≠ conta real ≠ skill preditivo.
