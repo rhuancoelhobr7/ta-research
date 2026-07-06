@@ -17,9 +17,16 @@
 //|    EOF                                                           |
 //|  NOTA: passe InpPairGate=2.137276 (gate exato da pesquisa) p/    |
 //|  breadth idêntico; o default 2.13 do indicador é arredondado.    |
+//|                                                                  |
+//|  v1.01: (a) corrige o alinhamento POSICIONAL do iCustom — a      |
+//|  chamada antiga pulava os 7 inputs visuais e o gate 2.137276     |
+//|  caía em InpEndLabels (bool), nunca chegando em InpPairGate,     |
+//|  que ficava no default 2.13; (b) adapta à ordem do Cssm v1.41    |
+//|  (4 inputs de modo na frente), forçando WM_BARS — a pesquisa     |
+//|  usa w=64 fixo, então a paridade é contra o modo legado.         |
 //+------------------------------------------------------------------+
 #property script_show_inputs
-#property version "1.00"
+#property version "1.01"
 
 input string InpCur      = "USD";     // moeda a exportar
 input int    InpNBars    = 50;        // barras (a partir da última fechada)
@@ -35,9 +42,12 @@ void OnStart()
    if(c<0){ Print("moeda invalida: ",InpCur); return; }
 
    int h=iCustom(_Symbol,PERIOD_H1,"Cssm",
+                 0,18.0,120.0,false,                    // v1.41: WM_BARS (w fixo, como a pesquisa)
                  PERIOD_H1,16,InpWMid,500,300,8,        // motor
                  2.0,1.0,0.55,0.75,-1.0,-0.75,          // estados
-                 true,InpPairGate,1.28,false);          // camada relacional
+                 true,true,false,12,16,9,false,         // visual (não afeta buffers)
+                 true,InpPairGate,1.28,false,           // camada relacional
+                 false);                                // MTF off (não afeta buffers)
    if(h==INVALID_HANDLE){ Print("iCustom falhou"); return; }
 
    double bh[],bs[];
