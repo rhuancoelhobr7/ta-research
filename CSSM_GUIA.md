@@ -164,45 +164,220 @@ horizonte/AutoGates são ignorados.
 
 ---
 
-## 4. Os cálculos, um a um
+## 4. Os cálculos, um a um (aprofundado)
 
-Todos operam sobre a janela `w_mid` do índice sintético da moeda (barras
-fechadas, da mais recente para trás).
+Convenções desta seção: a "janela" tem `w = w_mid` barras **fechadas**, da
+mais recente para trás; a "série" é o índice sintético da moeda (um
+log-preço acumulado); "retorno" é a diferença entre duas barras consecutivas
+do índice. Cada cálculo vem com: o que ele responde, como é feito, por que
+foi desenhado assim, e uma régua de leitura com exemplo.
 
-**t Newey-West (`TStat`)** — o coração. É o t-statístico da média dos
-retornos da janela, com erro-padrão Newey-West (kernel Bartlett, defasagem
-3) para não ser enganado por autocorrelação. Leitura intuitiva: *"quantos
-erros-padrão a deriva média está longe de zero"*. Num random walk puro,
-\|t\| ≥ t_gate acontece só ~5% do tempo — o gate é uma régua de "isso
-provavelmente não é ruído". (v1.20 substituiu o t de regressão sobre níveis,
-que dava 84% de falsos positivos.)
+### 4.0 O índice sintético — a matéria-prima
 
-**ER — Efficiency Ratio (`EffRatio`)** — `|deslocamento líquido| / soma dos
-|passos|`, de 0 a 1. ER 0.30 = 30% do caminho percorrido virou deslocamento;
-ER baixo = zigue-zague.
+**O que responde:** "quanto desta variação é da MOEDA, e não do par?"
 
-**Momentum normalizado (`VolMom`)** — deslocamento da janela dividido por
-`sd·√w` (sd = desvio dos retornos). É um "z do movimento": +2 significa
-deslocamento de 2 sigmas para a janela. Calculado em `w_fast` (rápido) e
-`w_mid` (médio).
+**Como é feito.** A cada barra, o log-retorno de cada um dos 28 pares é
+repartido entre as duas moedas: se EURUSD subiu 0,20%, o EUR ganha +0,20% e
+o USD ganha −0,20% *naquela relação*. O passo do índice de uma moeda é a
+**média dos seus 7 retornos orientados**; o índice é a soma acumulada
+desses passos (começando em 0 na barra mais antiga).
 
-**Persistência (`Persist`)** — fração das barras da janela que fecharam na
-direção do deslocamento líquido. 0.55 = 55% das barras a favor.
+**Exemplo.** Numa barra: EURUSD +0,20%, EURJPY +0,10%, EURGBP +0,05% e os
+outros 4 pares do EUR parados. Passo do índice EUR =
+(0,20 + 0,10 + 0,05 + 0 + 0 + 0 + 0) / 7 ≈ **+0,05%**.
 
-**Curvatura (`Convex`)** — coeficiente quadrático de um ajuste polinomial na
-janela, normalizado pela vol. Positivo = trajetória acelerando para cima;
-combinado com a direção, detecta o "arredondamento" de fim de movimento.
+**Por que assim.** EURUSD mistura duas histórias (EUR forte? USD fraco?); a
+média contra a cesta inteira isola a parte que é do EUR. Log-retornos porque
+são somáveis e simétricos (+1% e −1% se cancelam de verdade).
 
-**Aceleração (`gAcc`)** — EMA (span 8) de `VolMom(w_fast) − VolMom(w_mid)`:
-o momentum curto está ganhando ou perdendo do momentum médio?
+**A armadilha embutida** (que motiva a camada relacional, §4.9 e §6): uma
+média pode subir porque UM par disparou enquanto os outros seis dormem — o
+índice acusa "EUR forte" sem o mercado inteiro concordar.
 
-**z-scores adaptativos** — curvatura e aceleração são divididas pelo próprio
-desvio-padrão dos últimos `z_win` valores → escalas comparáveis entre moedas
-e regimes. (São esses z que aparecem nas setas do painel.)
+### 4.1 t Newey-West (`TStat`) — "a tendência é maior que o ruído?"
 
-**M — a linha plotada** — `M = sinal(t) · min(|t|/2, 1) · ER`. Direção pelo
-t, magnitude pela significância (satura em \|t\|=2) vezes a eficiência.
-Faixa teórica −1..+1; a janela exibe −0.6..+0.6 com níveis em ±0.25.
+**O que responde:** a deriva média por barra é distinguível de zero, dado o
+tamanho do ruído? É o número mais importante do indicador.
+
+**Como é feito, passo a passo:**
+1. Calcula os `w` retornos da janela e a média deles, `μ` (a "deriva").
+2. Mede o ruído: a variância dos retornos (γ₀) **e** as autocovariâncias
+   de defasagem 1, 2 e 3 (γ₁, γ₂, γ₃) — o quanto um retorno "puxa" o
+   seguinte.
+3. Monta a variância robusta:
+   `v = γ₀ + 2·(0,75·γ₁ + 0,50·γ₂ + 0,25·γ₃)` (pesos de Bartlett, que
+   decaem com a defasagem).
+4. Aplica um piso `v ≥ 0,1·γ₀` (autocovariância muito negativa não pode
+   "zerar" o ruído e inflar o t artificialmente).
+5. Erro-padrão da média: `EP = √(v/w)`. Resultado: `t = μ / EP`.
+
+**Analogia.** Pesquisa eleitoral: `μ` é a vantagem do candidato, `EP` é a
+margem de erro, e o t é a vantagem medida **em múltiplos da margem de
+erro**. A correção Newey-West existe porque retornos consecutivos não são
+opiniões independentes: entrevistar 18 pessoas da mesma família não vale 18
+entrevistas. Quando os retornos vêm "encadeados" (autocorrelação positiva),
+a amostra efetiva é menor do que parece, e o NW infla o erro-padrão para
+compensar — sem isso o t mentiria para cima exatamente nos momentos
+trending, que é quando você mais o consulta.
+
+**Exemplo numérico** (H1, janela de detecção w=18): retornos do índice com
+média +0,030% e desvio 0,10%, sem autocorrelação relevante.
+`EP = 0,10%/√18 ≈ 0,024%` → `t ≈ +1,27`. Está acima do t_low do H1 (1,651)?
+Não — ainda é ruído provável. Se a deriva dobrar para +0,060% mantendo o
+ruído: `t ≈ +2,5` — ainda **abaixo** do gate do H1 (2,800). É proposital:
+com só 18 barras, random walks produzem t grandes com facilidade, então a
+régua sobe (§4.10). A mesma deriva relativa sustentada por 64 barras
+passaria com folga no D1.
+
+**Por que não uma regressão sobre os preços?** Era o v1.1x — e regressão de
+tendência sobre *níveis* de um random walk acusa tendência em **84%** dos
+casos (regressão espúria). Sobre *retornos*, com NW, a taxa de falso
+positivo calibra em ~5%. Essa troca (v1.20) é a alma estatística do
+indicador.
+
+**Régua de leitura:** \|t\| < t_low → ruído; entre t_low e t_gate → zona de
+atenção (só vira Emergindo com aceleração coerente); ≥ t_gate → só ~5% de
+chance de sair de puro acaso naquela janela.
+
+### 4.2 ER — Efficiency Ratio: "quanto do caminho virou deslocamento?"
+
+**Como é feito:** `ER = |deslocamento líquido| / soma dos |passos|`, de 0
+a 1.
+
+**Exemplo.** O índice faz +10, −5, +10, −5, +10 (em unidades quaisquer):
+deslocamento líquido +20, caminho percorrido 40 → **ER = 0,50**. Se tivesse
+ido em linha reta (+4,+4,+4,+4,+4), ER = 1,00 com o mesmo destino.
+
+**Por que existe.** O t (§4.1) pergunta *"é estatisticamente real?"*; o ER
+pergunta *"foi eficiente?"*. São independentes: dá para ter t alto com ER
+baixo (deriva pequena mas teimosa dentro de muito serrilhado). O M (§4.8)
+multiplica os dois de propósito.
+
+**Régua:** > 0,3 = movimento limpo, direcional; 0,1–0,3 = tendência suja;
+< 0,1 = zigue-zague puro. (O rótulo da pesquisa usava er ≥ 0,12 como piso.)
+
+### 4.3 VolMom — momentum em "distâncias de passeio aleatório"
+
+**Como é feito:** `(P_agora − P_atrás) / (sd·√w)`, onde sd é o
+desvio-padrão dos retornos da janela.
+
+**A intuição do √w** (o detalhe bonito): um random walk se afasta do ponto
+de partida, em média, `sd·√w` após w passos — dobrar o tempo NÃO dobra a
+distância típica, multiplica por √2. É a assinatura da difusão (o passeio
+do bêbado). Dividir o deslocamento por `sd·√w` transforma o momentum em
+*"quantas distâncias-típicas-de-acaso este movimento percorreu"*.
+
+**Régua:** ±1 = indistinguível de acaso; ±2 ou mais = deslocamento incomum
+para o próprio ruído da janela. É calculado em duas janelas — rápida
+(`w_fast = w/4`) e média (`w_mid`) — e a **diferença** entre elas alimenta a
+aceleração (§4.6).
+
+### 4.4 Persistência — "quantas barras remaram a favor?"
+
+**Como é feito:** conta as barras de alta e de baixa na janela; devolve a
+fração que fechou **na direção do deslocamento líquido**.
+
+**Régua:** 0,50 = cara-ou-coroa; 0,55 (o limiar de Madura) parece pouco,
+mas manter 55% ao longo de dezenas de barras é um vento consistente; 0,65+
+é marcha forçada.
+
+**O que ela filtra:** o modo de falha clássico do t — um gap único gigante
+seguido de deriva lateral. O gap infla a média dos retornos (t alto), mas
+as barras seguintes ficam ~50/50 → persistência ≈ 0,50 → **não vira
+Madura**. Tendência de verdade avança por acúmulo, não por um susto.
+
+### 4.5 Curvatura (`Convex`) — "a trajetória está arqueando?"
+
+**Como é feito:** ajusta uma parábola aos preços da janela e extrai **só o
+termo quadrático** (a "boca" da parábola), construído de forma ortogonal —
+ou seja, o valor não se contamina nem pelo nível nem pela inclinação da
+reta. Depois normaliza por `w²/sd` para virar "curvatura acumulada na
+janela, em unidades de ruído por barra".
+
+**Leitura do sinal:** positivo = boca para cima (trajetória acelerando para
+cima, ou freando uma queda); negativo = boca para baixo.
+
+**Como o estado usa:** multiplica pelo sentido da tendência (`cx =
+z_curv·dir`). `cx ≤ −1,0` significa *"a janela inteira está arqueando
+CONTRA a tendência"* — numa alta, é o desenho do topo arredondado: os
+preços ainda sobem, mas cada trecho sobe menos que o anterior. É metade do
+critério de Exausta.
+
+### 4.6 Aceleração (`gAcc`) — "o motor curto está ganhando do médio?"
+
+**Como é feito:** `acc = EMA₈(VolMom_rápido − VolMom_médio)`. Os dois
+momentums estão na mesma escala (graças ao §4.3), então a diferença é
+justa; a EMA de span 8 tira o serrilhado barra a barra.
+
+**Leitura:** positivo = o empurrão recente supera a tendência média → o
+movimento está se intensificando; negativo = o trecho recente é mais fraco
+que a média da janela → perdendo força.
+
+**Onde entra:** em **Emergindo** (aceleração forte, \|z\| ≥ 0,75, e no
+MESMO sentido do momentum rápido — evita "acelerar" para o lado errado) e
+em **Exausta** (z_acc contra a tendência ≤ −0,75 = freando; é a outra
+metade do critério, junto com a curvatura).
+
+### 4.7 z-scores adaptativos — a régua que se recalibra sozinha
+
+Curvatura e aceleração não têm escala universal: o "normal" delas muda por
+moeda, por TF e por regime de volatilidade. Solução: dividir cada valor
+pelo desvio-padrão dos **próprios últimos `z_win` valores** daquela métrica
+naquela moeda. Um z de −1,0 então significa *"1 sigma abaixo do que tem
+sido normal PARA ESTA MÉTRICA, aqui, recentemente"* — e os limiares fixos
+dos inputs (0,75; −1,0) ficam comparáveis em qualquer contexto.
+
+**Efeito colateral honesto:** janelas de detecção curtas usam z_win menor
+(H1: 150 barras) → a régua se recalibra mais rápido → as setas ▲▼ do painel
+piscam mais no H1 do que no D1. Não é defeito, é a régua respirando.
+
+### 4.8 M — o resumo plotado
+
+`M = sinal(t) · min(|t|/2, 1) · ER`
+
+Direção pelo t; magnitude = significância (saturando em \|t\| = 2) vezes
+eficiência. Três exemplos que mostram o caráter da fórmula:
+
+| t | ER | M | Leitura |
+|---|----|----|---------|
+| +3,0 | 0,40 | **+0,40** | significativo E eficiente — tendência de livro |
+| +4,0 | 0,15 | **+0,15** | muito significativo, mas serrilhado — o M não se empolga |
+| +1,2 | 0,50 | **+0,30** | eficiente, mas evidência fraca — por isso o painel mostra t e estado ao lado do M |
+
+A saturação em \|t\|=2 é deliberada: acima do gate, "mais t" não é "mais
+tendência", é só mais certeza da mesma coisa — quem diferencia a partir
+dali é a eficiência. Faixa teórica −1..+1; a janela exibe −0,6..+0,6 com
+níveis pontilhados em ±0,25.
+
+### 4.9 Breadth — a aritmética da confirmação
+
+Para a moeda `c` com direção `d` (sinal do t do índice), olha-se o t **do
+par** (mesmo cálculo do §4.1, sobre o log-preço do par) orientado do ponto
+de vista de `c`: se `c` é a base do par, usa t como está; se é a cotada,
+inverte o sinal.
+
+- **soft** = fração dos 7 pares com t orientado a favor (qualquer tamanho);
+- **hard** = fração com t orientado a favor **e** \|t\| ≥ pair_gate.
+
+**Exemplo** (EUR em alta): EURUSD t=+2,5 → conta no hard; EURJPY +1,9 →
+só soft; EURGBP −0,4 → nada; EURCHF +2,6, EURCAD +2,2 → hard; EURAUD +0,9,
+EURNZD +1,1 → soft. Resultado: **hard 3/7, soft 6/7** → painel `3/7 •6`.
+Leitura: a cesta inclina a favor (6 de 7), mas só 3 relações têm
+confirmação estatística — tendência real porém ainda rasa; um `6/7 •7`
+seria tendência ampla de verdade.
+
+### 4.10 GateFor — por que janela menor exige t maior
+
+Com poucas barras, random walks produzem \|t\| grandes com facilidade — a
+sorte tem menos tempo para se diluir. Para manter a taxa de falso positivo
+em ~5% em qualquer janela, o limiar precisa SUBIR quando w encolhe. A
+tabela (calibrada por simulação) é interpolada linearmente:
+
+**Exemplo:** w = 36 cai entre os nós 32 (2,350) e 48 (2,205). Fração =
+(36−32)/(48−32) = 0,25 → `t_gate = 2,350 − 0,25·(2,350−2,205) = 2,314`.
+Acima de w=64 o gate congela em 2,134/1,280: mais dados não relaxam a
+régua além do assintótico. Abaixo de 16 não existe gate — é o piso
+estatístico que define as camadas do §2.
 
 ---
 
@@ -216,6 +391,13 @@ Avaliada por moeda, a cada barra fechada (dir = sinal do t):
 | **Emergindo** (amarelo) | t_low ≤ \|t\| < t_gate **e** \|z_acc\| ≥ 0.75 **e** aceleração e momentum rápido no MESMO sentido | ainda não significativo, mas acelerando de forma coerente |
 | **Madura** (verde) | \|t\| ≥ t_gate **e** persistência ≥ 0.55 | tendência estatisticamente confirmada e disciplinada |
 | **EXAUSTA** (vermelho) | \|t\| ≥ t_gate **e** curvatura contra ≤ −1.0 **e** aceleração contra ≤ −0.75 (sobrepõe Madura) | a tendência existe, mas está arredondando E freando — trecho final típico |
+
+**De onde vêm os números:** t_gate/t_low são **calibrados** (simulação em
+random walk, §4.10) — são os únicos com garantia estatística formal (~5% /
+~20% de excedência no acaso puro). Os demais (persistência 0,55, aceleração
+0,75, curvatura −1,0) são limiares de desenho em unidades interpretáveis
+(fração de barras; sigmas da própria métrica) — razoáveis, mas não
+otimizados; mexer neles muda a sensibilidade, não a validade.
 
 **Como ler:** Madura é o estado "confiável"; Emergindo é aviso antecipado
 (mais falso positivo, por construção); Exausta **não é sinal de reversão**
