@@ -189,3 +189,60 @@ usd7 (fiel ao indicador do usuário) e all28 (sensibilidade).
 
 - `a7_final_test.py` (holdout, últimos ~20% dos dias): NÃO executado. Roda
   UMA vez, só sob ordem explícita do dono do repositório.
+
+## 2026-07-06 — a13 (pré-registro): "peso" (derivada do CSS) → Tokyo→NY
+
+Motivação: 3 posts públicos novos do especialista (CHF/GBP/NZD, jul/2026)
+revelam que a leitura dele NÃO é a posição da linha (a12, nulo) e sim a
+VARIAÇÃO de intensidade ("fraqueza reduzida", "combustível no fim", "perde
+o fôlego", "força bruta", "região de retomada"), aplicada como árvore de
+VETO hierárquico (TF maior sem peso → comando passa ao menor). Ele também
+declara a janela operacional: abre em Tokyo, fecha ANTES de NY, sem
+gain/stop — um alvo diferente do rótulo v1.
+
+Pré-registro (commit ANTES da primeira execução, disciplina do a12):
+
+- ALVO NOVO (rótulo v1 INTOCADO — não é redefinição, é outra variável de
+  saída): sinal do Δ índice sintético da moeda em [T0, T0+15h) —
+  00:00→15:00 servidor = 17:00→08:00 NY. Sensibilidade secundária: 12h.
+- Features derivadas por TF: dpeso = |val|_t − |val|_{t−3}; conv (fora da
+  box E esvaziando); retomada (dentro da box, re-expandindo a favor).
+- 3 regras traduzidas dos posts: RA exaustão-contra (CHF), RB
+  transferência-de-comando ao H4 (GBP), RC amparo-D1 contra o macro (NZD).
+  Macro = MN se disponível, senão W1.
+- Critério de sucesso idêntico a5/a10/a12: top-1 no sinal do alvo > 3
+  baselines (continuação-D1, persistência do alvo, acaso pareado 50%) E >
+  p95 de 200 permutações em bloco; n<100 = amostra insuficiente. Dias
+  research; holdout intocado; usd7 primário, all28 sensibilidade. Fora
+  disso = exploratório.
+- Prior honesto: alvo Tokyo→NY nunca foi testado diretamente (a5/a12
+  miravam o rótulo; a10 Tarefa 2 mirava [T0+4h,T0+12h]) — mas os nulos
+  anteriores tornam um positivo improvável; o valor do a13 é fechar a
+  formulação "peso/derivada + veto + janela do especialista".
+- 10 testes novos (tests/test_a13.py): causalidade das features (dpeso/
+  conv/retomada não veem futuro), lógica das 3 regras, veto do D1, fallback
+  MN→W1, janela do alvo exclusiva em T0+15h.
+
+Pendente (fora deste commit): auditoria PROSPECTIVA das chamadas públicas
+do especialista (specialist_calls_v2.csv, coleta diária, 60-90 dias) para
+medir hit rate real na janela Tokyo→NY antes de gastar mais ciclos de
+engenharia reversa — os posts são ex-post e carregam viés de seleção.
+
+## 2026-07-06 — a13 executado: **RESULTADO NULO** (results/*_a13)
+
+Três execuções (usd7 15h primária; all28 15h e usd7 12h sensibilidades),
+395 dias research, holdout intocado:
+
+- Nenhuma regra sobrevive. Os dois quase-positivos morrem no reality
+  check: RB usd7 50.9% e RA all28 53.9% batem os baselines mas ficam
+  ABAIXO do p95 permutado (57.7% / 56.5%) — com 3 regras testadas contra
+  alvo binário, máximos dessa ordem saem de graça do acaso.
+- RC (amparo-D1) dispara em só 51-59 dias (n<100 = amostra insuficiente
+  por regra dura 6) e ainda assim fica abaixo de 50%.
+- ML teto sobre as 35 features de peso: AUC 0.500-0.520 — sem sinal.
+- Conclusão: a formulação "variação de intensidade + veto hierárquico +
+  janela Tokyo→NY declarada pelo especialista" TAMBÉM é nula. Com a5
+  (estado), a12 (posição/geometria) e a13 (derivada/peso), as leituras
+  1ª ordem, 2ª ordem e a janela operacional dele estão todas testadas e
+  nulas. Próximo passo racional: a auditoria prospectiva acima — medir o
+  hit rate REAL das chamadas antes de reverter mais qualquer coisa.
