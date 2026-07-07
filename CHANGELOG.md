@@ -334,3 +334,59 @@ Resultado da autenticação (results/*_a15, tol 15bp preço / 3% lucro):
   (Recalc 34-37 ms; ComputePairs 3,6 ms c/ w=18 vs 9,2 ms c/ w=64).
   Nota: este commit ficou fora do merge do PR #6 (merge feito antes do
   push); entra agora junto com o guia de leitura.
+
+## 2026-07-06 — Fidelidade de instrumento: css_screen + pré-registro a12b/a13b
+
+DESCOBERTA: o CSS que o dono olha na tela (indicators/
+CurrencySlopeStrength_v2_20.mq5, agora versionado intocado) usa matemática
+materialmente diferente do css_classic.py testado no a12/a13:
+
+| | tela (v2.20) | css_classic (a12/a13) |
+|---|---|---|
+| TMA | triangular Gernard (21..1), janela 20 | SMA(SMA), per=14 |
+| slope | lookback 1, norm × sqrt(slope) | suav=3 |
+| normalização | ATRrel(100), shift 10(+1 domingo), ÷10 | relativa (‰) |
+| escala | ×0.40, clamp ±0.98, FIXA | renorm por barra p/ ±0.4 |
+
+A escala fixa muda a GEOMETRIA (pode não haver moeda fora da box; na
+renorm por barra sempre há). Consequência honesta: os nulos do a12/a13
+valem para o que testaram; a lente da TELA nunca foi testada.
+
+- O dono AUTORIZOU (2026-07-06) re-execução única de correção de
+  fidelidade (a12b/a13b) — exceção pontual ao compromisso "nada de
+  retrospectivo até o veredito do a14", registrada como tal. Depois do
+  a12b/a13b o retrospectivo FECHA até o veredito do a14.
+- `css_screen.py`: porte exato da leitura AO VIVO (a TMA do MQ5 é
+  centrada no histórico = repaint; o porte reproduz a leitura da barra
+  corrente, única causal — divergência documentada na docstring). Golden
+  tests com a aritmética verbatim do MQ5. css_classic.py INTOCADO
+  (registro do que a12/a13 testaram).
+- PRÉ-REGISTRO a12b/a13b (commit congelado antes da 1ª execução): cópias
+  mínimas do a12/a13 trocando SÓ a fonte das linhas. Regras, alvos,
+  baselines, reality check, dias research, universos e critérios de
+  sobrevivência IDÊNTICOS. Proibido grid/regras novas/janelas novas.
+  Prior honesto: positivo improvável (a5 nulo no motor; ML ~0.50 em
+  todas as formulações); o valor é fechar a lacuna de fidelidade.
+- Paridade MQ5×Python: indicators/Export_CSS_Parity.mq5 (recalcula a
+  leitura ao vivo ancorada no tempo — comparação como-com-como) +
+  p2_css_parity.py. Compilação/execução MANUAIS no Windows do dono =
+  PENDENTE (mesmo status do parity do CSSM, critério 6).
+- a16 (segunda lente nos snapshots): BLOQUEADO — a16_snapshot_t0.py não
+  existe no repositório (nem em branch remota). Tarefa adiada até o a16
+  ser entregue/pushado.
+
+## 2026-07-06 — a12b/a13b executados: **RESULTADO NULO** (results/*_a12b, *_a13b)
+
+A lente da tela não muda o veredito. 395 dias research, holdout intocado:
+
+- a12b (rótulo v1): R1 10.3/10.3%, R2 11.3/12.1%, R3 12.2/9.4% top-1
+  (usd7/all28) — nenhuma bate persistência 14.5% nem p95 15.8/15.4%;
+  ML AUC 0.478–0.509.
+- a13b (Tokyo→NY): melhor caso RB usd7 15h 50.3% (bate baselines por
+  4.6pp mas p95=57.1%); all28 e 12h tudo abaixo dos baselines; RC sempre
+  n<100; ML AUC 0.497–0.538 (o 0.538 é 1 fold-set, ±0.016, sem regra
+  correspondente que sobreviva — não é sinal, é flutuação de teto).
+- Fechamento: com a5 (motor CSSM), a12/a13 (css_classic) e a12b/a13b
+  (css_screen fiel à tela), TODAS as leituras do indicador em T0 estão
+  testadas e nulas — inclusive a formulação exata que o dono vê na tela.
+  O retrospectivo FECHA aqui até o veredito do a14 (prospectivo).
