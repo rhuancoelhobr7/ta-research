@@ -390,3 +390,31 @@ A lente da tela não muda o veredito. 395 dias research, holdout intocado:
   (css_screen fiel à tela), TODAS as leituras do indicador em T0 estão
   testadas e nulas — inclusive a formulação exata que o dono vê na tela.
   O retrospectivo FECHA aqui até o veredito do a14 (prospectivo).
+
+## 2026-07-07 — v3 USD caso-controle: pré-registro, execução e RESULTADO NULO
+
+Estudo completo em `v3_usd_casocontrole/` (protocolo pré-registrado pelo
+dono do repo; regras duras no CLAUDE.md local; parâmetros em config.yaml).
+Pergunta: features engine-agnostic em T0 (véspera de Tóquio) discriminam
+os dias de USD protagonista fora da amostra?
+
+- Dados novos: OHLC D1+H1, 4 anos, 7 pares do USD (Fase 0: cobertura
+  1460d, gaps <= 0,82%, fuso confirmado — 206/208 segundas abrem 00:00).
+- **Calibração do rótulo documentada pré-resultados**: leitura literal
+  |close-open| >= p60(TR) deu taxa-base 6,4% (gate disparou; esperado
+  12-25%). Investigação: breadth>=6/7 sozinho = 58,4% dos dias — a
+  magnitude domina. Adotada leitura C ("movimento do dia" = True Range
+  vs p60 TR 60d): taxa-base 26,5%, dentro da banda dura. Trilha completa
+  no CLAUDE.md do v3.
+- Gates de vazamento: test_no_leakage (prova de truncagem sintética) +
+  self-check de truncagem em 12 dias reais + auditoria de max_ts <= T0.
+- Descoberta (683d): F1-F3 logit AUC OOF 0,595 vs F4 (CSSM v1.41, lentes
+  H1/H4, quarentena) 0,520 — mas p@k do modelo (0,315) JÁ não batia a
+  persistência (0,319) na própria descoberta.
+- **Confirmação (única, modelo congelado, 283d): NULO.** AUC 0,527
+  (p-perm 0,25); lift vs persistência +0,019, IC95% [-0,091, +0,137];
+  F4 AUC 0,473 (lift -0,108). Ambos nulos => o fenômeno é primariamente
+  IDENTIFICÁVEL EM RETROSPECTO, não previsível em T0 — resposta direta
+  à questão aberta do programa. O sinal da descoberta não sobreviveu.
+- Guardião da confirmação testado: segunda execução recusada sem
+  autorização humana explícita.

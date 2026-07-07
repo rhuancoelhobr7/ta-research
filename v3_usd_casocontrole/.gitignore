@@ -1,0 +1,3 @@
+data/
+resultados/*.pkl
+__pycache__/
