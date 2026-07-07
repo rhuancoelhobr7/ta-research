@@ -522,3 +522,32 @@ RESSALVAS HONESTAS (antes de qualquer entusiasmo):
 
 a18: aguardando o dono rodar s1_export_calendar.mq5 e copiar o CSV
 (depois: `python a18_calendar.py --ingest` e a análise).
+
+## 2026-07-07 — a18 executado (results/*_a18): calendário IMPORTA (com nuances)
+
+Fuso do calendário: ACHADO da verificação pré-registrada — timestamps em
+UTC+3 fixo vs feed de preços UTC+2/+3 DST-EUA; normalização documentada
+em `_normalize_calendar_tz` (pós-fix: 207/207 âncoras CPI em 15:30).
+
+- **H-A18-1 (notícia CRIA rótulo): SIGNIFICATIVO.** P(rótulo|HIGH da
+  moeda na janela) = 33.9% vs 24.1% sem HIGH; Δ=+9.8pp, IC95%
+  [+3.5, +15.9]. Primeira variável EX-ANTE associada ao rótulo em todo
+  o projeto.
+- **H-A18-2 (conflito IMPEDE rótulo): SIGNIFICATIVO NO SENTIDO
+  CONTRÁRIO ao pré-registrado.** Dias rotulados têm MAIS conflito
+  (12.1%) que dias sem rótulo (4.1%); Δ=−8.1pp, IC [−13.6, −1.4].
+  A hipótese como formulada está REFUTADA: conflito de notícias
+  acompanha dias de tendência, não os impede.
+- **H-A18-3 (agenda prevê protagonista): NULO** — abstém em 93.4% dos
+  dias (n=23 <100), 17.4% < p95 26.1%. A agenda sozinha, com direção por
+  persistência, não opera.
+- Descritivo (n=80): t_lock mediana 3.2h ANTES do evento HIGH mais
+  próximo; só 16% travam depois da notícia. Na janela [T0,T0+12h] os
+  eventos são da manhã Ásia/Europa (os releases americanos de 15:30
+  caem FORA da janela do rótulo v1) — leitura: a notícia da manhã marca
+  o dia, mas a trava da tendência costuma preceder o horário do evento.
+- Síntese honesta: o calendário é o primeiro sinal ex-ante com
+  associação real ao fenômeno (H1), mas fraco demais sozinho para
+  previsão operável (H3). Próximo candidato natural (exigiria novo
+  pré-registro): combinar agenda (H1) com confirmação de preço
+  intradiária (R-CONF do a17).
