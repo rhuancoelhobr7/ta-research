@@ -1,0 +1,13 @@
+{
+  "pares": "usd7",
+  "ks": [
+    1,
+    2,
+    4
+  ],
+  "vol_lookback": 63,
+  "breadth_min": 0.8571428571428571,
+  "n_dias_research": 395,
+  "n_perm": 200,
+  "perm_block": 5
+}

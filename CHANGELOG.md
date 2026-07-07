@@ -492,3 +492,33 @@ pré-registrado).**
 
 **Critério global de reporte:** resultados nulos são reportados sem
 suavização, no padrão do repo.
+
+## 2026-07-07 — a17 executado: PRIMEIRO RESULTADO NÃO-NULO (results/*_a17)
+
+Descritivo (784 eventos rotulados, usd7): t_lock mediana 3.3h (IQR 1.0–9.0);
+55% dos eventos travados até T0+4h; fração do movimento ainda por vir em
+T0+4h: mediana 73.7% — a tendência do dia "se anuncia" cedo E ainda deixa
+a maior parte do movimento na mesa (compatível com Tokyo=56% do a3 e com o
+align_4h=89% do a8).
+
+R-CONF(k) — SOBREVIVENTES pela primeira vez no projeto:
+- usd7: k=4h → top-1 12.1% (n=173) vs persistência 8.1% e p95 8.9%.
+- all28: k=2h → 14.4% (n=326) e k=4h → **21.0%** (n=329) vs persistência
+  8.1% e p95 12.8% — o k=4h all28 bate o p95 por 8.2pp.
+
+RESSALVAS HONESTAS (antes de qualquer entusiasmo):
+1. Correlação parcialmente MECÂNICA: o movimento até T0+k é parte do
+   rótulo de 12h (breadth/z parciais correlacionam com os totais). O
+   mitigante pré-registrado é a frac_restante (73% em 4h) — mas ela é
+   computada CONDICIONADA a dias rotulados (retrospecto); não é P&L.
+2. Identificar o protagonista ≠ capturar retorno: o a10-T2 mostrou que o
+   momentum das primeiras 4h NÃO continua em média sobre TODOS os dias.
+   A diferença aqui é a seleção (breadth>=6/7 + maior |z|) e o alvo
+   (top-1). O valor ECONÔMICO de operar T0+4h→T0+12h nos dias em que a
+   R-CONF(4) opina NÃO foi medido — exigiria novo estudo pré-registrado
+   (estilo a6, com custos), fora do escopo autorizado deste pacote.
+3. n=173–329 com IC largo; validação/treino misturados nos dias research
+   (como nos estudos anteriores); holdout intocado.
+
+a18: aguardando o dono rodar s1_export_calendar.mq5 e copiar o CSV
+(depois: `python a18_calendar.py --ingest` e a análise).
