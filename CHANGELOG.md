@@ -418,3 +418,77 @@ os dias de USD protagonista fora da amostra?
   à questão aberta do programa. O sinal da descoberta não sobreviveu.
 - Guardião da confirmação testado: segunda execução recusada sem
   autorização humana explícita.
+
+## 2026-07-07 — PRÉ-REGISTRO: a17 (tempo-de-trava) + s1 (calendário MT5) + a18 (calendário × rótulos)
+
+**Motivação.** a3 mostrou: 87,6% dos dias research têm >=1 rótulo; Tokyo
+carrega 56% do movimento. Análise descritiva (07/07) dos 49 dias sem
+rótulo: o gate ER falha em 40/49 (mediana 0,108 vs 0,196) — dias sem
+rótulo são majoritariamente dias SEM tendência limpa, não tendências
+revertidas. Hipóteses vivas: (i) o horário em que a tendência "trava" é
+cedo o bastante para ser operável; (ii) calendário econômico cria/impede
+rótulos.
+
+**a17 — tempo-de-trava (descritivo + 1 família de regra pré-registrada).**
+- Universo: dias research (treino+validação via `research_days`), pares
+  usd7 e all28, janela v1 [T0, T0+12h], M5.
+- Métricas por (dia, moeda rotulada): `t_lock` = instante do ÚLTIMO
+  cruzamento de zero do retorno acumulado do índice sintético (após ele,
+  o sinal nunca mais vira dentro da janela); `t_half` = primeiro instante
+  com |cum_ret| >= 50% do |idx_ret| final; `frac_restante(t)` = fração do
+  movimento final ainda por vir em t ∈ {1h, 2h, 4h, 8h}.
+- Saídas: distribuição (mediana, IQR, p90) de t_lock e t_half — geral,
+  por moeda, por direção, por dia-da-semana; % de dias travados até
+  T0+{1,2,4,8}h.
+- HONESTIDADE OBRIGATÓRIA no REPORT: t_lock é definido COM RETROSPECTO
+  (só se sabe que travou porque não virou depois). Ele descreve a
+  anatomia, não é regra de entrada.
+- Família de regra pré-registrada R-CONF(k), k ∈ {1, 2, 4} (grade
+  fechada, 3 células, correção via reality check sobre a grade): em
+  T0+k h, escolher a moeda com maior |cum_ret| normalizado (z usando o
+  mesmo vol_lookback=63 do v1, shift(1)) entre as com breadth-parcial
+  >= 6/7; prever protagonista=essa moeda, direção=sinal. Alvo: top-1
+  accuracy contra o protagonista do dia (rótulo v1). Baselines:
+  persistência D-1 (14,5%) e p95 do reality check por permutação em
+  blocos (`stats_blocks`). Critério de sucesso: bater AMBOS. Nota
+  pré-registrada: acertar em T0+4h só tem valor econômico se
+  `frac_restante(4h)` medida no bloco descritivo for material — reportar
+  as duas coisas juntas.
+- Anti-lookahead: features de R-CONF usam exclusivamente barras <= T0+k h.
+
+**s1_export_calendar.mq5 — export do calendário econômico do MT5.**
+- Script MQL5 usando `CalendarValueHistory` cobrindo 2024-07-01 até hoje.
+- Colunas: `event_id, time_server, country, currency, name, importance
+  (LOW/MODERATE/HIGH), actual, forecast, previous`.
+- Mapear país→moeda G8 (zona do euro inteira → EUR; descartar países
+  fora do G8).
+- Saída: `data/calendar/calendar_mt5.csv` + `_meta.json` com timestamp do
+  export e verificação de fuso: conferir que um evento âncora conhecido
+  (ex.: CPI dos EUA, 08:30 NY) aparece em 15:30 server no verão — mesmo
+  protocolo do `_meta.json` do raw. Se a verificação falhar, PARAR e
+  reportar.
+- Limitação registrada: `actual` é o valor atual no provedor (revisões
+  não reconstruíveis). Para QUALQUER uso preditivo em T0 só vale a
+  AGENDA (evento marcado, moeda, horário, importância) — que é conhecida
+  ex-ante. `actual`/surpresa só entram em análise descritiva pós-evento.
+
+**a18 — calendário × rótulos (2 hipóteses + 1 regra preditiva, tudo
+pré-registrado).**
+- H-A18-1 (notícia CRIA rótulo): P(rótulo_C | >=1 evento HIGH de C na
+  janela do dia) > P(rótulo_C | sem evento HIGH de C). Teste: diferença
+  de proporções, IC95% bootstrap em blocos por dia. Nulo se IC contém 0.
+- H-A18-2 (conflito IMPEDE rótulo): dias sem nenhum rótulo são
+  enriquecidos em "conflito" (eventos HIGH de >=2 moedas distintas na
+  janela) vs dias rotulados. Mesmo teste.
+- H-A18-3 (agenda prevê em T0 — a única leitura legalmente ex-ante):
+  regra "prever como protagonistas as moedas com evento HIGH agendado na
+  janela; direção pela persistência D-1 quando disponível, senão abster".
+  Métrica: top-1 accuracy nos dias em que a regra opina + taxa de
+  abstenção. Baselines: persistência e reality check. Sucesso: bater
+  ambos.
+- Descritivo adicional (se a17 já rodou): histograma de (t_lock − horário
+  do evento HIGH mais próximo) — a trava se agrupa depois de notícia?
+- Só dias research. Nada de holdout.
+
+**Critério global de reporte:** resultados nulos são reportados sem
+suavização, no padrão do repo.
