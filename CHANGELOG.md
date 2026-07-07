@@ -374,3 +374,19 @@ valem para o que testaram; a lente da TELA nunca foi testada.
 - a16 (segunda lente nos snapshots): BLOQUEADO — a16_snapshot_t0.py não
   existe no repositório (nem em branch remota). Tarefa adiada até o a16
   ser entregue/pushado.
+
+## 2026-07-06 — a12b/a13b executados: **RESULTADO NULO** (results/*_a12b, *_a13b)
+
+A lente da tela não muda o veredito. 395 dias research, holdout intocado:
+
+- a12b (rótulo v1): R1 10.3/10.3%, R2 11.3/12.1%, R3 12.2/9.4% top-1
+  (usd7/all28) — nenhuma bate persistência 14.5% nem p95 15.8/15.4%;
+  ML AUC 0.478–0.509.
+- a13b (Tokyo→NY): melhor caso RB usd7 15h 50.3% (bate baselines por
+  4.6pp mas p95=57.1%); all28 e 12h tudo abaixo dos baselines; RC sempre
+  n<100; ML AUC 0.497–0.538 (o 0.538 é 1 fold-set, ±0.016, sem regra
+  correspondente que sobreviva — não é sinal, é flutuação de teto).
+- Fechamento: com a5 (motor CSSM), a12/a13 (css_classic) e a12b/a13b
+  (css_screen fiel à tela), TODAS as leituras do indicador em T0 estão
+  testadas e nulas — inclusive a formulação exata que o dono vê na tela.
+  O retrospectivo FECHA aqui até o veredito do a14 (prospectivo).
