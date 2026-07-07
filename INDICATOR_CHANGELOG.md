@@ -47,3 +47,29 @@ a pesquisa (a11/v2) testou continuação pós-reconhecimento: **nula**.
    script (usar `InpPairGate=2.137276`, o gate exato da pesquisa).
    PENDENTE de execução manual no terminal — o t NW em si é o porte já
    validado pela suíte (tests/test_engine.py + test_relational.py).
+
+## CurrencySlopeStrength v2.30 (2026-07-06) — camada de "peso" (leitura, NÃO sinal)
+
+Arquivo novo `indicators/CurrencySlopeStrength_v2_30.mq5`; o
+`CurrencySlopeStrength_v2_20.mq5` fica INTOCADO como referência histórica
+(é a matemática exata testada no a12b/a13b).
+
+- Painel MTF: símbolo de peso por moeda × TF, k=3 barras FECHADAS do TF
+  (pré-registro do a13): `+` dpeso>0 (enchendo), `-` dpeso<0 (esvaziando),
+  `!` conv (fora da box E esvaziando — "combustível no fim"), `~`
+  retomada (dentro da box re-expandindo a favor). Os glifos ↑/↓/⚠/↻ do
+  pedido foram mapeados p/ ASCII por compatibilidade com Consolas/ANSI
+  nos labels do MT5 — legenda no rodapé do painel.
+- Buffers 10..17 = dpeso por moeda (ordem USD,EUR,GBP,JPY,CHF,CAD,AUD,
+  NZD) no TF das linhas, INDICATOR_CALCULATIONS p/ iCustom — **ler com
+  shift>=1** (barra 0 em formação). `indicator_buffers` 11→18.
+- `ComputeAt(tf,k,out)` generaliza o ComputeNow (que vira wrapper k=0);
+  a camada de peso usa k>=1 (barras fechadas, sem repaint). Caminho
+  v2.20 (linhas, painel de valores, alertas) inalterado.
+- DISCLAIMER no cabeçalho: vocabulário de leitura que espelha os termos
+  do especialista, SEM valor preditivo demonstrado — a13 (lente classic)
+  e a13b (esta lente) testaram estas leituras em T0 e deram NULO.
+- PENDENTE: compilação manual no MetaEditor do dono (mesmo status dos
+  parities). Junto: `indicators/Export_CSS_Parity.mq5` (paridade
+  css_screen, leitura ao vivo ancorada no tempo) também aguarda
+  compilação/execução manual.
