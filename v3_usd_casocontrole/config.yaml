@@ -1,0 +1,60 @@
+# v3_usd_casocontrole — TODOS os parâmetros pré-registrados.
+# Mudar qualquer valor depois da primeira rodada de resultados = violação
+# de protocolo (CLAUDE.md regra 3/6).
+
+dados:
+  pares: [EURUSD, GBPUSD, AUDUSD, NZDUSD, USDJPY, USDCHF, USDCAD]
+  usd_base: [USDJPY, USDCHF, USDCAD]     # USD é a moeda-base (sobe = USD forte)
+  anos: 4                                # piso duro do programa
+  timeframes: [H1, D1]
+  cobertura_tolerancia_dias: 10          # 4a menos isto ainda passa (borda de fim de semana)
+  gap_max_pct: 2.0                       # acima disto: parar p/ decisão humana
+  semana_h1_barras: 120                  # grade teórica: seg 00:00 - sex 23:00 (fuso do servidor)
+
+t0:
+  regra: "ultimo fechamento H1 do dia anterior; timestamps de FECHAMENTO; T0 = 00:00 do servidor"
+  # servidor: UTC+2 (inverno NA) / UTC+3 (verão NA), DST dos EUA (data/raw/_meta.json
+  # do programa, verificado pelo usuário). Tóquio abre 09:00 JST = 00:00 UTC =
+  # 02:00/03:00 do servidor -> T0 precede Tóquio por 2-3h.
+
+rotulagem:
+  breadth_min: 6                # de 7 pares a favor do USD no fechamento D1
+  direcao: close_menos_open     # movimento do dia (sem gap)
+  tr_janela: 60                 # dias rolantes do limiar de magnitude
+  tr_percentil: 0.60            # percentil do True Range
+  mag_min_ratio: 1.0            # mediana(|close-open| / p60TR) >= 1
+  taxa_base_esperada: [0.12, 0.25]
+  taxa_base_abortar_fora: [0.08, 0.32]   # fora disto: parar p/ decisão humana
+
+features:
+  f1_janelas_h: [8, 24, 48]     # horas antes de T0 (nowcast relacional)
+  f1_norm_janela_dias: 20       # normalização das magnitudes de janela
+  f2_range_janela: 20           # expansão/compressão do range
+  f2_dist_horizontes: [5, 20]   # dias p/ distância a extremos
+  f2_dist_sd_janela: 60         # sd dos retornos diários p/ normalizar distâncias
+  f2_run_min_breadth: 4         # de 7: direção majoritária do dia p/ contagem de sequência
+  f4_lentes:                    # v1.41; D1 estrutural excluída (aquecimento 2,2a)
+    H1: 18
+    H4: 30
+  f4_gates_fp: [0.05, 0.20]     # calibração t_gate/t_low (random walk)
+
+split:
+  descoberta_frac: 0.70
+  buffer_dias_uteis: 10
+  confirmacao_frac: 0.30
+
+modelos:
+  familias: [logit, gbm]        # regressão logística; gradient boosting raso
+  gbm_max_depth: 3
+  gbm_n_estimators: 200
+  gbm_learning_rate: 0.05
+  cv_folds: 5
+  cv_gap_dias: 10               # purga nas bordas dos folds (janelas rolantes)
+
+estatistica:
+  boot_n: 2000
+  boot_bloco_dias: 10
+  perm_n: 1000
+  perm_bloco_dias: 10
+  alpha: 0.05
+  precision_k: taxa_base        # k = taxa-base medida na janela avaliada
