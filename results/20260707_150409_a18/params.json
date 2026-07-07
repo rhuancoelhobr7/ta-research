@@ -1,0 +1,6 @@
+{
+  "n_dias": 395,
+  "n_perm": 200,
+  "n_boot": 2000,
+  "perm_block": 5
+}

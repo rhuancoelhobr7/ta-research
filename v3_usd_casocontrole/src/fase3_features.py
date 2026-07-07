@@ -188,6 +188,7 @@ def _gates(w_mid: int, cfg: dict) -> tuple[float, float]:
         fps = cfg["features"]["f4_gates_fp"]
         db[k] = [calibrate_gates(w_mid, n_walks=20, bars=12000, target_fp=fp)
                  for fp in fps]
+        cache.parent.mkdir(parents=True, exist_ok=True)  # clone fresco não tem data/
         cache.write_text(json.dumps(db, indent=2))
     return tuple(db[k])
 
