@@ -69,8 +69,14 @@ def test_verify_tz_para_com_fuso_errado(tmp_path):
 
 
 def test_verify_tz_ok(tmp_path):
-    rows = [f"21{i:02d},2026-0{1+i%6}-10 15:30:00,United States,USD,"
-            f"Consumer Price Index,HIGH,,," for i in range(8)]
+    """Fixture no fuso REAL do calendário (UTC+3 fixo): 16:30 no inverno
+    dos EUA, 15:30 no verão — a normalização leva tudo p/ 15:30 servidor."""
+    rows = []
+    for i in range(8):
+        mes = 1 + i % 6
+        hora = "16:30" if mes in (1, 2) else "15:30"   # jan/fev = inverno
+        rows.append(f"21{i:02d},2026-{mes:02d}-10 {hora}:00,United States,"
+                    f"USD,Consumer Price Index,HIGH,,,")
     df = m.load_calendar(_write(tmp_path, extra=rows))
     ev = m.verify_tz(df)
     assert ev["horario_modal_server"] == "15:30"

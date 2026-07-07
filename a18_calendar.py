@@ -85,15 +85,36 @@ def load_calendar(path=CSV_PATH) -> pd.DataFrame:
         raise SystemExit(f"colunas ausentes no calendário: {missing}")
     df["time_server"] = pd.to_datetime(df["time_server"])
     df = df[df.currency.isin(G8)].copy()      # G8 only (defesa em profundidade)
+    df["time_server"] = _normalize_calendar_tz(df["time_server"])
     return df
+
+
+def _normalize_calendar_tz(ts: pd.Series) -> pd.Series:
+    """Converte os timestamps do calendário para o RELÓGIO DOS PREÇOS.
+
+    ACHADO da verificação de fuso (2026-07-07): o calendário do MT5 vem em
+    UTC+3 FIXO o ano inteiro (CPI dos EUA: 15:30 no verão, 16:30 no
+    inverno), enquanto o feed de preços é UTC+2/+3 com DST dos EUA
+    (00:00 servidor = 17:00 NY o ano inteiro — data/raw/_meta.json). Sem
+    esta conversão, toda junção evento×janela erraria 1h no inverno.
+
+    Conversão: UTC = ts_calendário − 3h; NY = UTC→America/New_York;
+    servidor = NY + 7h (invariante 00:00 = 17:00 NY)."""
+    utc = ts - pd.Timedelta(hours=3)
+    ny = utc.dt.tz_localize("UTC").dt.tz_convert("America/New_York")
+    return ny.dt.tz_localize(None) + pd.Timedelta(hours=7)
 
 
 def verify_tz(cal: pd.DataFrame) -> dict:
     """Âncora de fuso: CPI dos EUA (08:30 NY) deve cair às 15:30 do servidor
     o ano inteiro (DST do servidor acompanha o dos EUA). PARA se falhar."""
+    # nomes vêm no idioma do terminal (PT-BR: "Índice de Preços ao
+    # Consumidor (IPC)"); Cleveland/Fed regionais excluídos (horário próprio)
     usd = cal[(cal.currency == "USD") &
-              cal.name.str.contains("CPI|Consumer Price Index",
-                                    case=False, regex=True)]
+              cal.name.str.contains("CPI|Consumer Price Index|"
+                                    "Preços ao Consumidor|IPC",
+                                    case=False, regex=True) &
+              ~cal.name.str.contains("Cleveland", case=False)]
     # eventos mensais 'm/m' e 'y/y' compartilham o horário do release
     if len(usd) < 6:
         raise SystemExit("verificação de fuso: <6 eventos de CPI dos EUA no "
