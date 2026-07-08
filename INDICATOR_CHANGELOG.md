@@ -73,3 +73,35 @@ Arquivo novo `indicators/CurrencySlopeStrength_v2_30.mq5`; o
   parities). Junto: `indicators/Export_CSS_Parity.mq5` (paridade
   css_screen, leitura ao vivo ancorada no tempo) também aguarda
   compilação/execução manual.
+
+## CurrencySlopeStrength v2.33 (2026-07-08) — aba MATRIZ 8×8 por par + visual estilo CSSM
+
+Novo arquivo `indicators/CurrencySlopeStrength_v2_33.mq5` (a v2.32 em uso no
+terminal foi importada verbatim no mesmo PR como referência). Pedido do dono:
+trazer a ideia da matriz do CSSM v1.40 para o CSS, **mas falando a língua do
+próprio CSS** — e polir o visual sem tocar em nenhum cálculo.
+
+- **MATRIZ 8×8 (botão MTX)**: célula (a,b) = valor de slope TMA do PAR a/b,
+  calculado por `ComputePairVals()` — réplica passo a passo do corpo por-par
+  do `ComputeAt` (mesmo W, mesma âncora `InpSyncBars`, mesmo norm ATR/stdev,
+  mesma TMA peso-21, mesmo clamp em ScaleMax), só que SEM agregar na cesta.
+  Deliberadamente NÃO é o t Newey-West do CSSM: a matriz do CSS mostra o
+  mesmo número que as linhas/painel mostrariam para aquele par. Orientação
+  antissimétrica por construção (b,a = −(a,b), o mesmo valor com sinal
+  trocado). Barra FECHADA (kShift=1, sem repaint), TF das linhas. Cores pelo
+  vocabulário do CSS: verde/vermelho = par fora da box 0.20 (limiar validado
+  no a19 Q5 — nenhum limiar novo inventado), cinza = dentro; célula mostra o
+  valor numérico. Rodapé: forte/fraca pela cesta + aviso "leitura descritiva,
+  não é sinal" (mesmo status de sempre).
+- **ComputeAt intocado**: contrato v2.30/v2.32 dos buffers 0–17 preservado;
+  a duplicação do corpo por-par foi escolhida de propósito para não alterar
+  a assinatura nem o caminho de código existente.
+- **Visual (só render, zero matemática)**: rótulos na ponta das linhas com
+  anti-colisão (herdado do CSSM v1.10; `InpEndLabels`); título no painel;
+  células chapadas (borda = fundo, estilo CSSM); cabeçalhos de coluna em
+  cinza; aviso do rodapé no tom do CSSM; objetos do painel movidos para o
+  grupo `CSS_p_` e da matriz para `CSS_mx_` (alternância painel ⇄ matriz
+  sem vazamento de objetos — infra idêntica à do CSSM v1.40).
+- **Aceite**: MetaEditor 5 CLI — `0 errors, 0 warnings`. Diff v2.32→v2.33
+  auditado: nenhuma linha de `TMA/ATRrel/Vol/ComputeAt/ComputeSeries/
+  FillPar/FillDpeso/PhaseDir/ColorState` alterada.
