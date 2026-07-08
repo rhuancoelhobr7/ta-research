@@ -551,3 +551,112 @@ em `_normalize_calendar_tz` (pós-fix: 207/207 âncoras CPI em 15:30).
   previsão operável (H3). Próximo candidato natural (exigiria novo
   pré-registro): combinar agenda (H1) com confirmação de preço
   intradiária (R-CONF do a17).
+
+## 2026-07-08 — PRÉ-REGISTRO: a19 (ciclo de fases do CSS) + a20 (confluência MTF)
+
+Espec fornecida pelo time ("a16/a17 — Ciclo de fases e confluência",
+renumerada a19/a20 — a16/a17 já ocupadas). Postura herdada: nada é sinal
+até provar o contrário; limiares definidos ANTES; breadth sempre como
+covariável (lição a11); só barras fechadas.
+
+DECISÕES DE IMPLEMENTAÇÃO (registradas antes de rodar):
+- Lente: `css_screen.py` (leitura AO VIVO, causal, golden tests verbatim
+  do MQ5). A TMA literal dos buffers é CENTRADA (usa até 20 barras
+  futuras no histórico) — shift>=1 NÃO elimina o lookahead; usar os
+  buffers literais em análises de retorno futuro (Q3/Q7+) seria viés de
+  futuro. A leitura ao vivo é o que o trader vê no momento e é a única
+  série causal. Divergência documentada também no css_screen.py.
+- GATE DE PARIDADE (§1 da espec): "sem paridade, o estudo não roda" —
+  a paridade MQ5×Python (Export_CSS_Parity.mq5 + p2_css_parity.py, já
+  no repo) depende de execução MANUAL no MT5 do dono. As análises a19/
+  a20 SÓ serão executadas depois do p2 passar (tol 1e-4; a espec pede
+  1e-6 — reportar o número obtido).
+- Dados: H1 10 anos × 28 pares exportados do MT5 (s2_export_h1.py;
+  desde 2016-07; data/raw/H1_*.parquet + _meta_h1.json). H4/D1/W1/MN
+  reamostrados do H1 no calendário do broker.
+- dpeso k=3 (pré-registro a13); box=0.20; ext=0.50; breadth hard 3/7.
+
+a19 — FASES (ciclo direcional FORÇA→EXAUSTÃO→FRAQUEZA→EXPANSÃO + espelho
+vendedor; delta=val_t−val_{t−3}; delta=0 mantém fase):
+- Q1 matriz de transição de Markov + taxa de rotação completa vs saltos;
+- Q1b distribuição de val na transição EXAUSTÃO→FRAQUEZA (0.50 tem base?);
+- Q2 dwell time + hazard de retorno à box;
+- Q3 retorno futuro do índice condicionado à fase (1/3/5/10 barras do
+  TF), bootstrap em blocos por dia, correção Benjamini-Hochberg nas
+  ~células fase×TF×moeda×horizonte. Nulo é aceitável e publicável;
+- Q4 whipsaw rate (reversão à box em <=2 barras);
+- Q5 percentil empírico de 0.20/0.50 por TF (limiar fixo significa
+  coisas diferentes por TF?);
+- Q6 tudo repetido com breadth>=3/7.
+
+a20 — CONFLUÊNCIA (por barra fechada de H1, fases por TF via último TF
+fechado):
+- Caveat mecânico registrado: soma das 8 forças ≈ 0 → baseline
+  OBRIGATÓRIO por block-shuffle preservando estrutura;
+- Estados: alinhamento de sinal (0–5 TFs), alinhamento de box, CASCATA
+  (D1/W1 em FORÇA + H1/H4 em EXPANSÃO a favor), divergência, fase
+  relativa (lead-lag);
+- Alvo definido AGORA: par = mais forte vs mais fraca no ranking D1 em
+  t; grande movimento = quartil superior do |retorno| 24h/72h
+  normalizado por ATR(100) H1, quartil calculado SÓ na exploração;
+- Q7 lift por alinhamento (monotonia vs baseline embaralhado);
+- Q8 cascata > alinhamento simples? (tese central do estilo);
+- Q9 lead-lag H1→H4/D1 (correlação cruzada de eventos de EXPANSÃO);
+- Q10 W1/MN: reportar nº de eventos independentes; provavelmente
+  inconclusivo — dizer com clareza;
+- Q11 tudo com breadth>=3/7;
+- Validação: split temporal 70/30 (exploração/confirmação); só é
+  "padrão" o que sobreviver no out-of-sample.
+
+Regra de decisão p/ v2.33+: mudança no indicador só com sobrevivência
+OOS/BH + melhora de leitura (whipsaw↓/dwell↑) sem venda preditiva.
+
+## 2026-07-08 — a19/a20 executados (results/*_a19, *_a20)
+
+Gate de paridade FECHADO antes da execução: max|Δ| = 5e-9 nas 8 moedas em
+H1 e D1 (espec pedia 1e-6). A paridade pegou bug real: o MQ5 calcula cada
+par na sequência NATIVA de barras; o porte usava grade ffillada (GBPJPY
+com 12 barras faltantes → Δ 1e-2). Corrigido em css_screen_lines.
+
+a19 — FASES:
+- Q1: a rotação EXISTE como gramática — transição canônica com prob.
+  média 0.65–0.67 em TODOS os TFs (H0=0.33); mas só 13–15% das saídas de
+  FORÇA completam o ciclo na ordem; a "falsa exaustão" (EXAUSTÃO→FORÇA)
+  é ~40% das saídas de exaustão.
+- Q1b: transição EXAUSTÃO→FRAQUEZA ocorre com val mediano 0.168; 0% em
+  [0.4,0.6] — o nível 0.50 é DECORAÇÃO.
+- Q2: dwell mediano 3–5 barras em todas as fases/TFs; hazard ~plano
+  (0.15–0.25) até n=8 — pouca memória além do curto prazo.
+- Q4: whipsaw ~22% em TODOS os TFs (não é pior no H1 — surpresa).
+- Q5: box 0.20 = p46–52 e ext 0.50 = p86–92 em todos os TFs — limiares
+  fixos têm significado ESTÁVEL entre TFs (hipótese de recalibração por
+  quantil por TF: refutada; não há o que melhorar aqui).
+- Q3: 54/492 células sobrevivem a BH 5% (~25 esperadas por acaso —
+  estrutura fraca porém real), HETEROGÊNEA por moeda: JPY = continuação
+  no D1 (FRAQUEZA −22bps/10d, EXAUSTÃO −45bps); CHF/EUR/USD = reversão.
+  Provável assinatura de regime da década (iene em queda secular) —
+  NÃO generalizar sem teste fora do regime. Q6 (breadth): 59 células,
+  mesmo padrão — breadth não muda o quadro.
+- BUG PEGO E CORRIGIDO ANTES DE PUBLICAR: 1ª execução usava bootstrap de
+  médias diárias NÃO-ponderadas (dias de reversão rápida dominavam o IC;
+  246 células "significativas" espúrias). Estimador corrigido para
+  pooling ponderado por reamostragem de dias → 54.
+
+a20 — CONFLUÊNCIA: **NULO na prática.**
+- Q7: sem monotonia — alinh=5/5 tem lift MENOR que 3/5 na confirmação;
+  3 células isoladas passam o p95 por 0.01–0.03 (28 comparações; ~1.4
+  falsas esperadas) sem estrutura coerente.
+- Q8: CASCATA (tese central do estilo: D1/W1 em força + H1/H4 em
+  retomada) — lift confirmação 1.04–1.11 vs p95 1.07–1.08: NULA.
+- Q9: 82.8% dos onsets de EXPANSÃO no D1 precedidos por EXPANSÃO no H1 —
+  mecânico (24 barras H1 dentro de 1 D1; o H1 cicla rápido), não é
+  "relógio" explorável.
+- Q10: W1 523 barras / MN 121 — inconclusivo por construção, como
+  pré-registrado.
+- Q11: breadth não altera nada materialmente.
+
+Síntese: o ciclo de fases é uma GRAMÁTICA descritiva real do indicador
+(útil p/ leitura no painel), mas a confluência MTF — o coração do método
+visual — não separa grandes movimentos do acaso. Nenhuma mudança no
+indicador se qualifica pelas regras da espec (§5): Q5 refutou a
+recalibração de limiares; Q7/Q8 não sobreviveram OOS.

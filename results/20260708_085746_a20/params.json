@@ -1,0 +1,17 @@
+{
+  "tfs": [
+    "H1",
+    "H4",
+    "D1",
+    "W1",
+    "MN"
+  ],
+  "horizons_h": [
+    24,
+    72
+  ],
+  "vol_win": 100,
+  "n_shuffle": 200,
+  "split": "2023-07-17",
+  "quartil_alvo": 0.75
+}
