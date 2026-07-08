@@ -1,0 +1,142 @@
+[
+  {
+    "symbol": "EURUSD",
+    "h1_bars": 62160,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "GBPUSD",
+    "h1_bars": 62157,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "USDJPY",
+    "h1_bars": 62144,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "USDCHF",
+    "h1_bars": 62142,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "USDCAD",
+    "h1_bars": 62142,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "AUDUSD",
+    "h1_bars": 62143,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "NZDUSD",
+    "h1_bars": 62136,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "EURGBP",
+    "h1_bars": 62143,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "EURJPY",
+    "h1_bars": 62146,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "EURCHF",
+    "h1_bars": 62144,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "EURCAD",
+    "h1_bars": 62134,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "EURAUD",
+    "h1_bars": 62130,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "EURNZD",
+    "h1_bars": 62127,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "GBPJPY",
+    "h1_bars": 61919,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "GBPCHF",
+    "h1_bars": 62124,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "GBPCAD",
+    "h1_bars": 61987,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "GBPAUD",
+    "h1_bars": 61896,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "GBPNZD",
+    "h1_bars": 61233,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "CHFJPY",
+    "h1_bars": 62129,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "CADJPY",
+    "h1_bars": 62142,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "AUDJPY",
+    "h1_bars": 62122,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "NZDJPY",
+    "h1_bars": 62127,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "CADCHF",
+    "h1_bars": 62132,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "AUDCHF",
+    "h1_bars": 62106,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "NZDCHF",
+    "h1_bars": 61944,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "AUDCAD",
+    "h1_bars": 62104,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "NZDCAD",
+    "h1_bars": 61981,
+    "desde": "2016-07-08 13:00:00"
+  },
+  {
+    "symbol": "AUDNZD",
+    "h1_bars": 62114,
+    "desde": "2016-07-08 13:00:00"
+  }
+]
