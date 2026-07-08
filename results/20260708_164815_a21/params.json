@@ -1,0 +1,21 @@
+{
+  "setups": [
+    "S1",
+    "S2",
+    "S3"
+  ],
+  "filters": [
+    "f1",
+    "f2",
+    "f3",
+    "f4"
+  ],
+  "box": 0.2,
+  "diffthr": 0.0,
+  "stop": 1.5,
+  "tgt": 2.0,
+  "timeout": 48,
+  "slip_pips": 0.5,
+  "split": "2023-07-17",
+  "n_trades": 183448
+}

@@ -24,6 +24,9 @@
 //|   leituras em T0 contra o alvo Tokyo->NY e o resultado foi NULO  |
 //|   nas duas lentes (ta-research, CHANGELOG 2026-07-06). Use como  |
 //|   descricao do presente, nunca como previsao do dia.             |
+//|   a21: uso como FILTRO de setup independente tambem nulo         |
+//|   (28 pares, 10a, custos, out-of-sample; controle negativo nao   |
+//|   piorou) — o indicador e DESCRITIVO, ponto.                     |
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
