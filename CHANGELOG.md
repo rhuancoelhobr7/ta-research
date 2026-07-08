@@ -660,3 +660,29 @@ Síntese: o ciclo de fases é uma GRAMÁTICA descritiva real do indicador
 visual — não separa grandes movimentos do acaso. Nenhuma mudança no
 indicador se qualifica pelas regras da espec (§5): Q5 refutou a
 recalibração de limiares; Q7/Q8 não sobreviveram OOS.
+
+## 2026-07-08 — PRÉ-REGISTRO: a21 (CSS como FILTRO de setup independente)
+
+Espec do time. Pergunta única: condicionar um setup de entrada
+INDEPENDENTE ao estado do CSS melhora o resultado do MESMO setup sem
+filtro? É o último papel do CSS não refutado por a5→a13→a19→a20. Se não
+agregar, a linha de pesquisa fecha: CSS = descritivo, ponto.
+
+Definido ANTES de rodar (código congelado neste commit):
+- Setups-base (arquétipos, não escolhidos por serem bons — medimos o
+  DELTA do filtro): S1 breakout Donchian(20); S2 pullback EMA50/200;
+  S3 reversão RSI(14) 30/70. Saída: stop 1.5×ATR, alvo 2×ATR (=> +1.33R
+  no acerto), timeout 48 barras. Custo: spread mediano + 0.5 pip, em
+  preço, round-trip. 1 posição/par; sinais em posição aberta ignorados.
+- Filtros empilhados no bar do sinal (D1 âncora + H1, css_screen):
+  F1 direção (base>=+box, quote<=-box, base-quote>=diffthr=0);
+  F2 F1+breadth>=3/7 nas duas moedas; F3 F2+veto exaustão D1 (|val|>=box
+  e delta contra, k=3); F4 só o par nº1 do ranking D1. Controle negativo
+  F1-INV (contra o diferencial; deve piorar).
+- Dados: H1 OHLC + spread 10a × 28 pares (s3_export_h1_ohlc.py). Split
+  70/30 como a20.
+- Sucesso: Δexpectancy>=+0.10R, IC exclui 0, BH-ok, OUT-OF-SAMPLE, em
+  >=2/3 setups p/ o mesmo filtro. n_f<100 OOS = inconclusivo (não nulo).
+  BH nas 24 células (3×4×2). Bootstrap por blocos semanais.
+- Traps mitigadas: base ruim (<-0.5R) não conclui sobre CSS; F4 poucos
+  trades = inconclusivo; regime por terços de ATR como secundário.

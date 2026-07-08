@@ -1,0 +1,198 @@
+[
+  {
+    "symbol": "EURUSD",
+    "bars": 62160,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 1.0
+  },
+  {
+    "symbol": "GBPUSD",
+    "bars": 62157,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "USDJPY",
+    "bars": 62144,
+    "point": 0.001,
+    "digits": 3,
+    "spread_mediano_points": 2.0
+  },
+  {
+    "symbol": "USDCHF",
+    "bars": 62142,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "USDCAD",
+    "bars": 62142,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 2.0
+  },
+  {
+    "symbol": "AUDUSD",
+    "bars": 62143,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "NZDUSD",
+    "bars": 62136,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 8.0
+  },
+  {
+    "symbol": "EURGBP",
+    "bars": 62143,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "EURJPY",
+    "bars": 62146,
+    "point": 0.001,
+    "digits": 3,
+    "spread_mediano_points": 2.0
+  },
+  {
+    "symbol": "EURCHF",
+    "bars": 62144,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 3.0
+  },
+  {
+    "symbol": "EURCAD",
+    "bars": 62134,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 7.0
+  },
+  {
+    "symbol": "EURAUD",
+    "bars": 62130,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 3.0
+  },
+  {
+    "symbol": "EURNZD",
+    "bars": 62127,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 8.0
+  },
+  {
+    "symbol": "GBPJPY",
+    "bars": 61919,
+    "point": 0.001,
+    "digits": 3,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "GBPCHF",
+    "bars": 62124,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 6.0
+  },
+  {
+    "symbol": "GBPCAD",
+    "bars": 61987,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 6.0
+  },
+  {
+    "symbol": "GBPAUD",
+    "bars": 61896,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "GBPNZD",
+    "bars": 61233,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 12.0
+  },
+  {
+    "symbol": "CHFJPY",
+    "bars": 62129,
+    "point": 0.001,
+    "digits": 3,
+    "spread_mediano_points": 7.0
+  },
+  {
+    "symbol": "CADJPY",
+    "bars": 62142,
+    "point": 0.001,
+    "digits": 3,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "AUDJPY",
+    "bars": 62122,
+    "point": 0.001,
+    "digits": 3,
+    "spread_mediano_points": 3.0
+  },
+  {
+    "symbol": "NZDJPY",
+    "bars": 62127,
+    "point": 0.001,
+    "digits": 3,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "CADCHF",
+    "bars": 62132,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 5.0
+  },
+  {
+    "symbol": "AUDCHF",
+    "bars": 62106,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 10.0
+  },
+  {
+    "symbol": "NZDCHF",
+    "bars": 61944,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "AUDCAD",
+    "bars": 62104,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 4.0
+  },
+  {
+    "symbol": "NZDCAD",
+    "bars": 61981,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 6.0
+  },
+  {
+    "symbol": "AUDNZD",
+    "bars": 62114,
+    "point": 1e-05,
+    "digits": 5,
+    "spread_mediano_points": 7.0
+  }
+]
