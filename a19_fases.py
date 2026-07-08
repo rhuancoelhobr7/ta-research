@@ -50,8 +50,9 @@ def load_h1_closes() -> pd.DataFrame:
     files = sorted(RAW.glob("H1_*.parquet"))
     if not files:
         raise SystemExit("sem data/raw/H1_*.parquet — rode s2_export_h1.py")
+    # sem ffill: cada par calcula na sequência nativa (semântica MQ5)
     return pd.DataFrame({f.stem.removeprefix("H1_"):
-                         pd.read_parquet(f)["close"] for f in files}).ffill()
+                         pd.read_parquet(f)["close"] for f in files})
 
 
 def grid_tf(h1: pd.DataFrame, tf: str) -> pd.DataFrame:

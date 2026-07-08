@@ -37,10 +37,20 @@ from css_screen import css_screen_lines
 
 def grid(tf: str, pares: list[str]) -> pd.DataFrame:
     if tf in ("H1", "H4"):
-        m5 = pd.DataFrame(load_closes()).ffill()
-        g = m5.resample({"H1": "1h", "H4": "4h"}[tf]).last().dropna(how="all")
+        h1_files = sorted(pathlib.Path("data/raw").glob("H1_*.parquet"))
+        if h1_files:                     # H1 NATIVO (s2) — mesma grade do MT5
+            # sem ffill: cada par calcula na SUA sequência nativa
+            # (semântica do MQ5; ver css_screen_lines)
+            m5 = pd.DataFrame({f.stem.removeprefix("H1_"):
+                               pd.read_parquet(f)["close"]
+                               for f in h1_files})
+        else:                            # fallback: M5 reamostrado
+            m5 = pd.DataFrame(load_closes()).ffill()
+        g = m5 if tf == "H1" and h1_files else \
+            m5.resample({"H1": "1h", "H4": "4h"}[tf]).last().dropna(how="all")
     elif tf == "D1":
-        g = pd.DataFrame(load_d1_closes()).ffill()
+        # sem ffill (mesma razão do H1: sequência nativa por par)
+        g = pd.DataFrame(load_d1_closes())
     else:
         raise SystemExit(f"TF não suportado no parity: {tf}")
     return g[[c for c in pares if c in g.columns]]

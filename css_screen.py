@@ -120,7 +120,15 @@ def css_screen_lines(closes: pd.DataFrame, scale: float = SCALE,
         base, quote = sym[:3], sym[3:6]
         if base not in G8 or quote not in G8:
             continue
-        val = pair_contribution(closes[sym], scale, scale_max)
+        # semântica do MQ5: cada par na SUA sequência nativa de barras
+        # (CopyClose pula buracos de liquidez); barras ffilladas/sintéticas
+        # deslocariam a janela da TMA/ATR (achado da paridade: GBPJPY com
+        # 12 barras H1 faltantes gerava Δ~1e-2). Calcula no nativo e
+        # alinha por asof (ffill) de volta à grade comum.
+        s = closes[sym].dropna()
+        val = pair_contribution(s, scale, scale_max)
+        if not val.index.equals(closes.index):
+            val = val.reindex(closes.index, method="ffill")
         acc[base] = acc[base].add(val, fill_value=np.nan)
         acc[quote] = acc[quote].sub(val, fill_value=np.nan)
         cnt[base] += 1
