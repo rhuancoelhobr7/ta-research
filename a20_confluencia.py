@@ -87,8 +87,11 @@ def main():
         brd[tf] = align_closed(breadth_hard(g, lines), tf, h1_idx)
 
     d1v = val["D1"]
-    strongest = d1v.idxmax(axis=1)
-    weakest = d1v.idxmin(axis=1)
+    ok_rows = d1v.notna().any(axis=1)          # warm-up da TMA: linhas 100% NaN
+    strongest = pd.Series(pd.NA, index=d1v.index, dtype=object)
+    weakest = pd.Series(pd.NA, index=d1v.index, dtype=object)
+    strongest[ok_rows] = d1v[ok_rows].idxmax(axis=1)
+    weakest[ok_rows] = d1v[ok_rows].idxmin(axis=1)
     sgn = np.sign(d1v)
 
     # fases orientadas pela direção do D1 da própria moeda
@@ -158,22 +161,22 @@ def main():
     day_keys = h1_idx.normalize()
 
     def lift_table(mask_state: pd.Series, H: int, sample: np.ndarray) -> tuple:
-        y = tgt[H][sample]
+        y = tgt[H].iloc[sample]
         thr = np.nanquantile(tgt[H][explo], 0.75)   # quartil SÓ na exploração
         big = y >= thr
         base = big.mean()
-        st = mask_state[sample]
-        sel = big[st == 1]
+        st = mask_state.iloc[sample]
+        sel = big[(st == 1).to_numpy()]
         if len(sel) < 50 or base == 0:
             return np.nan, len(sel), base
         return sel.mean() / base, len(sel), base
 
     def shuffle_p95(mask_state: pd.Series, H: int, sample: np.ndarray) -> float:
         """Lift p95 sob block-shuffle por dia (estado embaralhado vs alvo)."""
-        y = tgt[H][sample]
+        y = tgt[H].iloc[sample]
         thr = np.nanquantile(tgt[H][explo], 0.75)
         big = (y >= thr).to_numpy()
-        st = mask_state[sample].to_numpy()
+        st = mask_state.iloc[sample].to_numpy()
         dk = day_keys[sample]
         udays = dk.unique()
         pos_by_day = {d: np.nonzero(dk == d)[0] for d in udays}

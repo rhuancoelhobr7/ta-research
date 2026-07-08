@@ -169,18 +169,22 @@ def q3_conditional(ph: pd.DataFrame, idx: pd.DataFrame, tf: str,
                 if len(sel) < 50:
                     continue
                 days = sel.index.normalize()
-                # bootstrap em blocos por dia
+                # bootstrap em blocos por DIA com pooling PONDERADO:
+                # reamostra dias inteiros e recalcula a média por barra.
+                # (bootstrap de médias diárias não-ponderadas enviesa: dias
+                # com 1-2 barras na fase são dias de reversão rápida e
+                # dominariam o IC — bug pego na 1ª execução, corrigido
+                # antes de publicar.)
                 vals = sel.to_numpy()
-                blocks = pd.Series(vals).groupby(days.values).mean().to_numpy()
-                if len(blocks) < 20:
+                sums = pd.Series(vals).groupby(days.values).agg(["sum", "size"])
+                if len(sums) < 20:
                     continue
-                lo, hi = np.percentile(
-                    [np.mean(np.random.default_rng(i).choice(
-                        blocks, len(blocks))) for i in range(400)], [2.5, 97.5])
+                s_arr, n_arr = sums["sum"].to_numpy(), sums["size"].to_numpy()
+                rng_ = np.random.default_rng(hash((tf, c, f, h)) % 2**32)
+                pick = rng_.integers(0, len(s_arr), size=(400, len(s_arr)))
+                bs = s_arr[pick].sum(axis=1) / n_arr[pick].sum(axis=1)
+                lo, hi = np.percentile(bs, [2.5, 97.5])
                 mean = vals.mean()
-                # p bicaudal aproximado do bootstrap
-                bs = np.array([np.mean(np.random.default_rng(1000 + i).choice(
-                    blocks, len(blocks))) for i in range(400)])
                 pval = 2 * min((bs <= 0).mean(), (bs >= 0).mean())
                 cells.append({"tf": tf, "cur": c, "fase": f, "h": h,
                               "n": len(sel), "mean_bps": mean * 1e4,

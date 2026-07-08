@@ -610,3 +610,53 @@ fechado):
 
 Regra de decisão p/ v2.33+: mudança no indicador só com sobrevivência
 OOS/BH + melhora de leitura (whipsaw↓/dwell↑) sem venda preditiva.
+
+## 2026-07-08 — a19/a20 executados (results/*_a19, *_a20)
+
+Gate de paridade FECHADO antes da execução: max|Δ| = 5e-9 nas 8 moedas em
+H1 e D1 (espec pedia 1e-6). A paridade pegou bug real: o MQ5 calcula cada
+par na sequência NATIVA de barras; o porte usava grade ffillada (GBPJPY
+com 12 barras faltantes → Δ 1e-2). Corrigido em css_screen_lines.
+
+a19 — FASES:
+- Q1: a rotação EXISTE como gramática — transição canônica com prob.
+  média 0.65–0.67 em TODOS os TFs (H0=0.33); mas só 13–15% das saídas de
+  FORÇA completam o ciclo na ordem; a "falsa exaustão" (EXAUSTÃO→FORÇA)
+  é ~40% das saídas de exaustão.
+- Q1b: transição EXAUSTÃO→FRAQUEZA ocorre com val mediano 0.168; 0% em
+  [0.4,0.6] — o nível 0.50 é DECORAÇÃO.
+- Q2: dwell mediano 3–5 barras em todas as fases/TFs; hazard ~plano
+  (0.15–0.25) até n=8 — pouca memória além do curto prazo.
+- Q4: whipsaw ~22% em TODOS os TFs (não é pior no H1 — surpresa).
+- Q5: box 0.20 = p46–52 e ext 0.50 = p86–92 em todos os TFs — limiares
+  fixos têm significado ESTÁVEL entre TFs (hipótese de recalibração por
+  quantil por TF: refutada; não há o que melhorar aqui).
+- Q3: 54/492 células sobrevivem a BH 5% (~25 esperadas por acaso —
+  estrutura fraca porém real), HETEROGÊNEA por moeda: JPY = continuação
+  no D1 (FRAQUEZA −22bps/10d, EXAUSTÃO −45bps); CHF/EUR/USD = reversão.
+  Provável assinatura de regime da década (iene em queda secular) —
+  NÃO generalizar sem teste fora do regime. Q6 (breadth): 59 células,
+  mesmo padrão — breadth não muda o quadro.
+- BUG PEGO E CORRIGIDO ANTES DE PUBLICAR: 1ª execução usava bootstrap de
+  médias diárias NÃO-ponderadas (dias de reversão rápida dominavam o IC;
+  246 células "significativas" espúrias). Estimador corrigido para
+  pooling ponderado por reamostragem de dias → 54.
+
+a20 — CONFLUÊNCIA: **NULO na prática.**
+- Q7: sem monotonia — alinh=5/5 tem lift MENOR que 3/5 na confirmação;
+  3 células isoladas passam o p95 por 0.01–0.03 (28 comparações; ~1.4
+  falsas esperadas) sem estrutura coerente.
+- Q8: CASCATA (tese central do estilo: D1/W1 em força + H1/H4 em
+  retomada) — lift confirmação 1.04–1.11 vs p95 1.07–1.08: NULA.
+- Q9: 82.8% dos onsets de EXPANSÃO no D1 precedidos por EXPANSÃO no H1 —
+  mecânico (24 barras H1 dentro de 1 D1; o H1 cicla rápido), não é
+  "relógio" explorável.
+- Q10: W1 523 barras / MN 121 — inconclusivo por construção, como
+  pré-registrado.
+- Q11: breadth não altera nada materialmente.
+
+Síntese: o ciclo de fases é uma GRAMÁTICA descritiva real do indicador
+(útil p/ leitura no painel), mas a confluência MTF — o coração do método
+visual — não separa grandes movimentos do acaso. Nenhuma mudança no
+indicador se qualifica pelas regras da espec (§5): Q5 refutou a
+recalibração de limiares; Q7/Q8 não sobreviveram OOS.
