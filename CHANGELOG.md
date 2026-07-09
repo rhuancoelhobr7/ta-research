@@ -5,6 +5,40 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-09 — a24: CSS como preditor de range — NULO (regra de parada)
+
+Teste do CSS focado no PROCESSO REAL do trader (P8 alinhamento percentil, P9
+limpo×conflitado, P10 breadth), medido na virada de NY (13:00 UTC, barra
+fechada anterior — merge_asof backward EXCLUSIVO, sem lookahead). Split 70/30,
+teste out-of-sample, bootstrap semanal, controle negativo (P8 embaralhado entre
+pares no dia). Dois enquadramentos:
+
+- **(A) ABSOLUTO** (pergunta do trader — qual par move mais): ranquear 28 pares
+  por range pós-abertura [13,17) UTC.
+  - **base_atr: top3=71 pips, lift 1.65, Spearman 0.79** — baseline FORTE.
+  - base_asia (a23): top3=69, lift 1.59, Spearman 0.63.
+  - **P8_mag: top3=47, lift 1.08, Spearman 0.05** — colado no controle
+    (P8_shuf: 44, 1.01, 0.005). P8/P8_intra/P8_long/P10 todos ~=controle.
+  - **stack_atr_P8: 64 < base_atr 71** — juntar CSS ao ATR PIORA (dilui).
+  → O CSS NÃO ajuda a escolher o par de maior amplitude além da largura
+    estrutural (que o ATR já captura). Nulo econômico.
+- **(B) RELATIVO** (o CSS tem QUALQUER informação? alvo = range/ATR-próprio):
+  - **P8_mag: lift 1.032, Spearman 0.035** vs controle 1.002/−0.002 — um
+    SUSSURRO de sinal acima do embaralhado (P8_intra 1.027/0.036 > P8_long
+    1.010/0.027, coerente com "impulso de curto prazo" da spec). P10 lift 0.996
+    (=controle, nulo — breadth é redundante com o rank no CSS agregado).
+  → O CSS carrega informação minúscula sobre o par exceder a PRÓPRIA norma,
+    economicamente irrelevante e muito abaixo do baseline do a23.
+- **P9**: traj limpo 0.454 vs conflitado 0.441 — diferença ínfima (0.013), na
+  direção prevista mas sem sustentação prática.
+
+**VEREDITO (regra de parada da spec confirmada)**: para escolher par por
+movimento, use ATR de sessão + o efeito Tokyo→Londres (a22/a23); **o CSS não
+agrega** — nem no processo real do trader (P8/P9/P10). Consistente com o achado
+da âncora (CSS concorrente/atrasado, não preditivo). Nada do CSS entra no
+indicador como sinal de seleção de par. O valor eventual do CSS fica p/ o a26b
+(confirmação concorrente, dimensão não-preditiva) — não p/ a24/a25.
+
 ## 2026-07-09 — Agenda a22-a26: export M15, ingestão e TAREFA 0
 
 Início da agenda de movimento/volatilidade (a22–a26 — escolher o PAR com maior
