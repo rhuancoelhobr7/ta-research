@@ -5,6 +5,201 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-09 — a26: anatomia dos dias valiosos vs mortos (fecha a agenda)
+
+Nível de moeda. Atividade = média do range normalizado dos 7 pares da moeda;
+líder = mais ativa. "Dia com destaque" = líder ≥1.5× a norma = **39%** dos dias
+(sensível ao threshold; o "~88%" da spec era a métrica de tendência absoluta do
+projeto CSSM, não de range). Estado CSS de manhã (pré-Tokyo 00:00 UTC, sem
+lookahead).
+
+- **Q11**: a líder do dia é identificável de manhã? Acerto pela moeda mais
+  extrema no CSS de manhã **18.1%** (acaso 12.5%); pela líder de ontem 21.1%.
+  → a líder NÃO é antecipável — confirma o a24.
+- **Q12**: dias mortos têm assinatura? Dispersão do ranking CSS de manhã
+  destaque 19.0 vs morto 18.1 — diferença ínfima; sem sinal prévio claro de
+  "ficar de fora".
+- **Q13**: persistência de liderança 18.6% (acaso 12.5%) — marginal, ~nula
+  (coerente com a persistência-dia-a-dia nula já achada no projeto irmão).
+
+Síntese: o dia/moeda valioso não é previsível pelo estado CSS de manhã. Fecha a
+agenda a22-a26 de forma coerente: seleção por range = ATR de sessão (a25); CSS
+só tem dimensão concorrente (a26b), nunca preditiva. a26 não introduz primitiva
+estatística nova (composição de idxmax/std/shift + funções já testadas).
+
+## 2026-07-09 — a26b: CSS como confirmação concorrente — PERSISTE (não nulo)
+
+Última chance do CSS, na dimensão NÃO-preditiva: dado alinhamento ativo em T
+(|pct_base−pct_quote|≥70 em M15 E H1, ao vivo), o movimento em curso continua?
+Estado em T como gatilho concorrente, mede o futuro (distinto de a22-a25). M15
+proxy do M5 pedido pela spec. 23.384 eventos alinhados vs controle.
+
+- **Q14 duração**: mediana 4 barras M15 (~60 min) até devolver ≥30% do pico.
+- **MFE**: alinhado 16.8 pips vs controle 11.6 → **1.45×**.
+- **Q16 persistência (o achado limpo)**: residual mediano entrando em T+0=12.8,
+  T+1=11.5, T+2=10.0 pips — entrar 1-2 barras depois ainda captura 90%/78%. O
+  movimento PERSISTE; entrar "no meio" funciona.
+- **Q15 degradação**: pct da moeda forte 90 (T+0) → 70 (T+15), gradual — janela
+  de oportunidade moderadamente ampla.
+- **CAVEAT (registrado no REPORT)**: controle NÃO é vol-pareado; parte da razão
+  1.45× é clustering de volatilidade (a23, já no ATR), não valor único do CSS. O
+  achado sólido é a PERSISTÊNCIA. Isolar o incremento do CSS exige controle
+  pareado por volatilidade recente (follow-up).
+
+**Contraste central da agenda**: o CSS FALHA como preditor de seleção (a24) mas
+o movimento sob alinhamento PERSISTE como fenômeno concorrente (a26b) — coerente
+com o processo real do trader (confirmar, não prever) e com a âncora (CSS
+atrasado). Não muda o produto a25 (seleção = ATR); no máximo o CSS vira leitura
+de confirmação/timing marcada como concorrente, nunca sinal preditivo.
+
+## 2026-07-09 — a25: ranqueador de par operável (CSS-free) — o produto
+
+Ranqueador final com o que sobreviveu ao a24 (CSS excluído): modelo logístico
+interpretável em log(base_atr) [largura estrutural] + asia_norm [atividade de
+hoje vs a norma do par]. Alvo: top-quartil de range da janela pós-abertura entre
+os 28 pares. Split 70/30, backtest no teste (775 dias).
+
+- **Q8**: coef log_atr **1.52** (domina); coef asia_norm **0.006** (~zero). Para
+  SELEÇÃO cross-section de par, a largura estrutural é praticamente o único sinal
+  — o Tokyo→Londres do a23 (real no tempo) é redundante com o ATR aqui.
+- **Q9**: top-1 do modelo **77.7 pips ≈ sempre-o-mais-volátil 77.5** (ATR puro),
+  **1.81× o aleatório (43)**, ~80% do teto do dia (97.7). O modelo não supera só
+  ranquear por ATR-sessão — honesto: o produto É "opere o par de maior ATR de
+  sessão".
+- **Q10**: top-1 igual ao dia anterior **84%**; só **8 pares** já foram top-1 —
+  ranqueador estável, baixo custo de troca de instrumento.
+
+Deliverable diz explícito: ranqueia por MOVIMENTO ESPERADO, não lucro. Produto =
+ATR-de-sessão; CSS e até o tilt de Tokyo ficam de fora por não agregarem.
+
+## 2026-07-09 — a24: CSS como preditor de range — NULO (regra de parada)
+
+Teste do CSS focado no PROCESSO REAL do trader (P8 alinhamento percentil, P9
+limpo×conflitado, P10 breadth), medido na virada de NY (13:00 UTC, barra
+fechada anterior — merge_asof backward EXCLUSIVO, sem lookahead). Split 70/30,
+teste out-of-sample, bootstrap semanal, controle negativo (P8 embaralhado entre
+pares no dia). Dois enquadramentos:
+
+- **(A) ABSOLUTO** (pergunta do trader — qual par move mais): ranquear 28 pares
+  por range pós-abertura [13,17) UTC.
+  - **base_atr: top3=71 pips, lift 1.65, Spearman 0.79** — baseline FORTE.
+  - base_asia (a23): top3=69, lift 1.59, Spearman 0.63.
+  - **P8_mag: top3=47, lift 1.08, Spearman 0.05** — colado no controle
+    (P8_shuf: 44, 1.01, 0.005). P8/P8_intra/P8_long/P10 todos ~=controle.
+  - **stack_atr_P8: 64 < base_atr 71** — juntar CSS ao ATR PIORA (dilui).
+  → O CSS NÃO ajuda a escolher o par de maior amplitude além da largura
+    estrutural (que o ATR já captura). Nulo econômico.
+- **(B) RELATIVO** (o CSS tem QUALQUER informação? alvo = range/ATR-próprio):
+  - **P8_mag: lift 1.032, Spearman 0.035** vs controle 1.002/−0.002 — um
+    SUSSURRO de sinal acima do embaralhado (P8_intra 1.027/0.036 > P8_long
+    1.010/0.027, coerente com "impulso de curto prazo" da spec). P10 lift 0.996
+    (=controle, nulo — breadth é redundante com o rank no CSS agregado).
+  → O CSS carrega informação minúscula sobre o par exceder a PRÓPRIA norma,
+    economicamente irrelevante e muito abaixo do baseline do a23.
+- **P9**: traj limpo 0.454 vs conflitado 0.441 — diferença ínfima (0.013), na
+  direção prevista mas sem sustentação prática.
+
+**VEREDITO (regra de parada da spec confirmada)**: para escolher par por
+movimento, use ATR de sessão + o efeito Tokyo→Londres (a22/a23); **o CSS não
+agrega** — nem no processo real do trader (P8/P9/P10). Consistente com o achado
+da âncora (CSS concorrente/atrasado, não preditivo). Nada do CSS entra no
+indicador como sinal de seleção de par. O valor eventual do CSS fica p/ o a26b
+(confirmação concorrente, dimensão não-preditiva) — não p/ a24/a25.
+
+## 2026-07-09 — Agenda a22-a26: export M15, ingestão e TAREFA 0
+
+Início da agenda de movimento/volatilidade (a22–a26 — escolher o PAR com maior
+amplitude esperada na janela, NÃO prever direção). Especificação pré-registrada
+em `a22_a26_ESPEC.md` (fornecida pelo dono).
+
+- **TAREFA -1 (`export_ta.mq5`)**: script MQL5 novo (o caminho Python `s3` já
+  existia, mas a spec pede export via tela p/ forçar histórico M15 profundo).
+  Rodado 1× pelo dono. Broker **Evalanch Ltd. / TenTrade-Server**. Exportou
+  **28/28 pares G8 em M15, ~248k barras (~10 anos, 2016-07→2026-07), 0 fallback
+  H1**. Campos OHLC+tick_volume+spread; `broker_info.csv` long-format com
+  offset servidor↔GMT e point/tick_size/digits por par.
+- **Ingestão (`s4_ingest_ta.py`)** → `data/raw/M15_{SYMBOL}.parquet` (tempo de
+  SERVIDOR naive, p/ casar com a paridade MQ5 e a19/a20) + `_meta_ta.json`.
+  pip = point×10 (JPY 0.01, resto 0.0001). Integridade: 0 NaN/dup/desordem.
+- **DST (atenção p/ a22)**: o offset servidor↔UTC NÃO é constante — UTC+2
+  inverno / UTC+3 verão (DST dos EUA, já documentado na Fase 0). `broker_info`
+  capturou só o instante atual (verão, 10799s≈+3h). Conversão sessão↔UTC no a22
+  deve ser DST-aware; "meia-noite servidor = 17:00 NY" é estável nos dois lados.
+- **TAREFA 0 (`t0_normalize.py`)**: `val` bruto + percentil rolante CAUSAL
+  (janelas 100/200/500, POR TF, sem lookahead) → `pct` 0-100, recriando a escala
+  do site currencystrengthzone. **Dois motores em paralelo** (decisão do dono):
+  `screen` (css_screen v2.20 — o CSS da tela, o PRODUTO) e `cssm` (cssm_engine —
+  comparação/ablação no a24). TFs M15/H1/H4/D1/W1/MN reamostrados de M15.
+  Saída em `data/derived/css_{engine}_{tf}.parquet`.
+- **Validação de paridade**: css_screen H1 (reamostrado de M15) vs
+  `css_parity_H1.csv` congelado → **max|dif|=5e-9** (exato). Pipeline fiel.
+- **Limitação MN**: 10 anos = 121 barras mensais; pct com janela ≥100 é
+  quase inútil no MN (e marginal no W1). O alinhamento P8 nos TFs longos terá
+  que usar o `val`/sinal, não o pct rolante — a decidir no a24.
+- **Achado do caso-âncora (GBP/JPY 08/07)** — o mais importante: o par teve
+  132 pips range / +101 net (dia limpo, traj 0.77), mas o CSS é
+  **CONCORRENTE/ATRASADO, não preditivo**. Na virada de NY (~12:00 UTC) o
+  css_screen de curto prazo mostrava **GBP FRACO** (H1 pct 5.5), com divergência
+  D1(forte)↔H1(fraco); GBP só "acende" (pct 76→93) das 17→20 UTC, DEPOIS do
+  movimento. Confirma a distinção central da agenda: a âncora é confirmação em
+  andamento (a26b), não setup preditivo (a24). Sugere que P8 pré-abertura terá
+  poder preditivo fraco — o nulo que a agenda foi feita p/ detectar. O "GBP=100
+  em todos os TFs" da spec é a escala do SITE (≠ nosso pct rolante) e ocorreu
+  pós-movimento, não na abertura.
+
+## 2026-07-09 — a23: inter-sessão (o OURO — resultado POSITIVO)
+
+Autocorrelação de volatilidade entre sessões, com partição ORDENADA sem
+sobreposição (`SEQ_SESSIONS`: asia[00-07)/londres[07-13)/ny[13-21) UTC — asia
+fecha antes de londres abrir, sem lookahead). Split 70/30, métricas no TESTE,
+thresholds do treino, bootstrap semanal, BH na família Q4. `sessions.py`
+parametrizado por `windows` (SESSIONS descritivo × SEQ_SESSIONS preditivo).
+
+- **Q4 (o ouro)**: asia→londres Spearman mediana **0.342** (IC95 [0.316, 0.367]),
+  **acima** do baseline de persistência londres-ontem→hoje (**0.267**), com
+  **28/28 pares significativos após BH**, out-of-sample. Volatilidade tem
+  memória inter-sessão e o efeito Tokyo→Londres é real e robusto.
+- **Matriz de transição** (teste): asia_Q1→63% londres_Q1 (calma persiste);
+  asia_Q4→38% londres_Q4 (vol persiste). Diagonal pesada e monotônica.
+- **Q5**: overlap Londres∩NY captura **~49% do range diário em 3h** (ny 63%,
+  londres 59%, asia 45% — não somam 1, são max-min de subconjuntos aninhados).
+- **Q6**: "mola comprimida" **REFUTADA** — londres cresce monotônico com o
+  quartil de asia (Q1 0.70 → Q4 1.03); asia apertada prevê londres abaixo da
+  mediana (a calma continua), não expansão.
+- **Q7**: fator asia da moeda NÃO agrega sobre o range asia do próprio par
+  (r_fator 0.19-0.43 < r_próprio 0.40-0.64) — null p/ lead-lag entre moedas.
+
+**Consequência p/ a regra de parada (spec)**: já existe um ranqueador de range
+utilizável SEM CSS (ATR/range de sessão + Tokyo→Londres). O a24 (CSS) agora tem
+um baseline ALTO a bater; combinado com o achado da âncora (CSS concorrente, não
+preditivo), a expectativa é que P8 pré-abertura adicione pouco — a testar.
+
+## 2026-07-09 — a22: mapa descritivo de sessões
+
+`sessions.py` (framework reutilizável a22–a26): conversão servidor→UTC
+**DST-aware** (servidor = ET+7h; offset +3 verão/+2 inverno resolvido via
+US/Eastern), sessões em janela UTC fixa (tokyo 00-09, londres 07-16, ny 12-21,
+overlap 13-16). Limitação v1: sem bucket pré-Tokyo/Sydney (~21-00 UTC).
+`a22_sessoes.py` sobre 28 pares × ~10 anos (290k linhas par×sessão×dia).
+
+- **Q1 (intensidade = pips/HORA, não total)**: correção importante — overlap tem
+  3h vs 9h das outras; comparar total confundiria com duração. Ranking:
+  **overlap 11.9 pips/h (1.85× a mediana do par) >> londres 6.2 > ny 5.5 >
+  tokyo 4.6**. Overlap Londres∩NY é disparado a janela mais intensa (premissa da
+  Q5/a23 confirmada). Estabilidade 1ª×2ª metade (Spearman par×sessão): 0.868.
+- **Q2 (absoluto)**: crosses de **GBP dominam TODAS as sessões** em pips
+  (GBPNZD/GBPJPY/GBPAUD no topo até no Tokyo) — **refuta o folclore** "JPY-cross
+  domina Tokyo" no sentido absoluto.
+- **Q2b (relativo)**: mas no share de intensidade Tok/Ldn/NY, AUD/NZD/JPY-crosses
+  puxam p/ Tokyo (share ~0.31-0.35; AUDNZD/AUDJPY/NZDJPY no topo) e CAD/USD/EUR
+  puxam p/ Londres/NY (~0.22-0.25). Folclore confirmado no sentido RELATIVO.
+- **Q3**: overlap sobe de seg (1.64) p/ sex (1.95); segunda é a mais fraca.
+  Notícias HIGH (calendário 2024-07→) dão lift modesto de range (ny +14%,
+  londres/overlap +10%) — coerente, sem ser dramático.
+
+Nenhuma decisão de trade — é o eixo descritivo p/ a23 (inter-sessão) e o
+baseline que o CSS terá que bater no a24.
+
 ## 2026-07-04 — Fase 0: dados e fuso
 
 - Exportados 28 pares G8 do MT5 (M5 2 anos + D1 4 anos) via `s0_export_mt5.py`.
