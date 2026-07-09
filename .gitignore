@@ -16,3 +16,6 @@ data/derived/*.parquet
 # binarios MT5 e logs de compilacao
 *.ex5
 compile*.log
+
+# parquets derivados dos estudos (grandes; REPORT.md e .csv sao versionados)
+results/**/*.parquet

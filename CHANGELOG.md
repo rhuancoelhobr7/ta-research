@@ -46,6 +46,32 @@ em `a22_a26_ESPEC.md` (fornecida pelo dono).
   em todos os TFs" da spec é a escala do SITE (≠ nosso pct rolante) e ocorreu
   pós-movimento, não na abertura.
 
+## 2026-07-09 — a22: mapa descritivo de sessões
+
+`sessions.py` (framework reutilizável a22–a26): conversão servidor→UTC
+**DST-aware** (servidor = ET+7h; offset +3 verão/+2 inverno resolvido via
+US/Eastern), sessões em janela UTC fixa (tokyo 00-09, londres 07-16, ny 12-21,
+overlap 13-16). Limitação v1: sem bucket pré-Tokyo/Sydney (~21-00 UTC).
+`a22_sessoes.py` sobre 28 pares × ~10 anos (290k linhas par×sessão×dia).
+
+- **Q1 (intensidade = pips/HORA, não total)**: correção importante — overlap tem
+  3h vs 9h das outras; comparar total confundiria com duração. Ranking:
+  **overlap 11.9 pips/h (1.85× a mediana do par) >> londres 6.2 > ny 5.5 >
+  tokyo 4.6**. Overlap Londres∩NY é disparado a janela mais intensa (premissa da
+  Q5/a23 confirmada). Estabilidade 1ª×2ª metade (Spearman par×sessão): 0.868.
+- **Q2 (absoluto)**: crosses de **GBP dominam TODAS as sessões** em pips
+  (GBPNZD/GBPJPY/GBPAUD no topo até no Tokyo) — **refuta o folclore** "JPY-cross
+  domina Tokyo" no sentido absoluto.
+- **Q2b (relativo)**: mas no share de intensidade Tok/Ldn/NY, AUD/NZD/JPY-crosses
+  puxam p/ Tokyo (share ~0.31-0.35; AUDNZD/AUDJPY/NZDJPY no topo) e CAD/USD/EUR
+  puxam p/ Londres/NY (~0.22-0.25). Folclore confirmado no sentido RELATIVO.
+- **Q3**: overlap sobe de seg (1.64) p/ sex (1.95); segunda é a mais fraca.
+  Notícias HIGH (calendário 2024-07→) dão lift modesto de range (ny +14%,
+  londres/overlap +10%) — coerente, sem ser dramático.
+
+Nenhuma decisão de trade — é o eixo descritivo p/ a23 (inter-sessão) e o
+baseline que o CSS terá que bater no a24.
+
 ## 2026-07-04 — Fase 0: dados e fuso
 
 - Exportados 28 pares G8 do MT5 (M5 2 anos + D1 4 anos) via `s0_export_mt5.py`.
