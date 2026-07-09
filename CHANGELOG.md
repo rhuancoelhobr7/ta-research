@@ -5,6 +5,26 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-09 — a25: ranqueador de par operável (CSS-free) — o produto
+
+Ranqueador final com o que sobreviveu ao a24 (CSS excluído): modelo logístico
+interpretável em log(base_atr) [largura estrutural] + asia_norm [atividade de
+hoje vs a norma do par]. Alvo: top-quartil de range da janela pós-abertura entre
+os 28 pares. Split 70/30, backtest no teste (775 dias).
+
+- **Q8**: coef log_atr **1.52** (domina); coef asia_norm **0.006** (~zero). Para
+  SELEÇÃO cross-section de par, a largura estrutural é praticamente o único sinal
+  — o Tokyo→Londres do a23 (real no tempo) é redundante com o ATR aqui.
+- **Q9**: top-1 do modelo **77.7 pips ≈ sempre-o-mais-volátil 77.5** (ATR puro),
+  **1.81× o aleatório (43)**, ~80% do teto do dia (97.7). O modelo não supera só
+  ranquear por ATR-sessão — honesto: o produto É "opere o par de maior ATR de
+  sessão".
+- **Q10**: top-1 igual ao dia anterior **84%**; só **8 pares** já foram top-1 —
+  ranqueador estável, baixo custo de troca de instrumento.
+
+Deliverable diz explícito: ranqueia por MOVIMENTO ESPERADO, não lucro. Produto =
+ATR-de-sessão; CSS e até o tilt de Tokyo ficam de fora por não agregarem.
+
 ## 2026-07-09 — a24: CSS como preditor de range — NULO (regra de parada)
 
 Teste do CSS focado no PROCESSO REAL do trader (P8 alinhamento percentil, P9
