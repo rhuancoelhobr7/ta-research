@@ -1,0 +1,291 @@
+{
+  "source": "export_ta.mq5",
+  "broker": "Evalanch Ltd.",
+  "server": "TenTrade-Server",
+  "tz_index": "server (naive); UTC = index - server_gmt_offset_sec",
+  "server_gmt_offset_sec": 10799,
+  "export_years": 10,
+  "n_symbols": 28,
+  "symbols": {
+    "AUDCAD": {
+      "bars": 248292,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "AUDCHF": {
+      "bars": 248285,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "AUDJPY": {
+      "bars": 248358,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 0.001,
+      "tick_size": 0.001,
+      "digits": 3,
+      "pip": 0.01,
+      "m15_fallback": ""
+    },
+    "AUDNZD": {
+      "bars": 248259,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "AUDUSD": {
+      "bars": 248531,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "CADCHF": {
+      "bars": 248446,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "CADJPY": {
+      "bars": 248499,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 0.001,
+      "tick_size": 0.001,
+      "digits": 3,
+      "pip": 0.01,
+      "m15_fallback": ""
+    },
+    "CHFJPY": {
+      "bars": 248415,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 0.001,
+      "tick_size": 0.001,
+      "digits": 3,
+      "pip": 0.01,
+      "m15_fallback": ""
+    },
+    "EURAUD": {
+      "bars": 248360,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "EURCAD": {
+      "bars": 248429,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "EURCHF": {
+      "bars": 248524,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "EURGBP": {
+      "bars": 248519,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "EURJPY": {
+      "bars": 248517,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 0.001,
+      "tick_size": 0.001,
+      "digits": 3,
+      "pip": 0.01,
+      "m15_fallback": ""
+    },
+    "EURNZD": {
+      "bars": 248372,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "EURUSD": {
+      "bars": 248593,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "GBPAUD": {
+      "bars": 247408,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "GBPCAD": {
+      "bars": 247760,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "GBPCHF": {
+      "bars": 248360,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "GBPJPY": {
+      "bars": 247436,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 0.001,
+      "tick_size": 0.001,
+      "digits": 3,
+      "pip": 0.01,
+      "m15_fallback": ""
+    },
+    "GBPNZD": {
+      "bars": 244769,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "GBPUSD": {
+      "bars": 248578,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "NZDCAD": {
+      "bars": 247789,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "NZDCHF": {
+      "bars": 247486,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "NZDJPY": {
+      "bars": 248375,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 0.001,
+      "tick_size": 0.001,
+      "digits": 3,
+      "pip": 0.01,
+      "m15_fallback": ""
+    },
+    "NZDUSD": {
+      "bars": 248452,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "USDCAD": {
+      "bars": 248508,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "USDCHF": {
+      "bars": 248531,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 1e-05,
+      "tick_size": 1e-05,
+      "digits": 5,
+      "pip": 0.0001,
+      "m15_fallback": ""
+    },
+    "USDJPY": {
+      "bars": 248523,
+      "first_server": "2016-07-11 16:30:00",
+      "last_server": "2026-07-09 16:00:00",
+      "point": 0.001,
+      "tick_size": 0.001,
+      "digits": 3,
+      "pip": 0.01,
+      "m15_fallback": ""
+    }
+  }
+}
