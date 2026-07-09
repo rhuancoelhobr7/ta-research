@@ -5,6 +5,31 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-09 — a26b: CSS como confirmação concorrente — PERSISTE (não nulo)
+
+Última chance do CSS, na dimensão NÃO-preditiva: dado alinhamento ativo em T
+(|pct_base−pct_quote|≥70 em M15 E H1, ao vivo), o movimento em curso continua?
+Estado em T como gatilho concorrente, mede o futuro (distinto de a22-a25). M15
+proxy do M5 pedido pela spec. 23.384 eventos alinhados vs controle.
+
+- **Q14 duração**: mediana 4 barras M15 (~60 min) até devolver ≥30% do pico.
+- **MFE**: alinhado 16.8 pips vs controle 11.6 → **1.45×**.
+- **Q16 persistência (o achado limpo)**: residual mediano entrando em T+0=12.8,
+  T+1=11.5, T+2=10.0 pips — entrar 1-2 barras depois ainda captura 90%/78%. O
+  movimento PERSISTE; entrar "no meio" funciona.
+- **Q15 degradação**: pct da moeda forte 90 (T+0) → 70 (T+15), gradual — janela
+  de oportunidade moderadamente ampla.
+- **CAVEAT (registrado no REPORT)**: controle NÃO é vol-pareado; parte da razão
+  1.45× é clustering de volatilidade (a23, já no ATR), não valor único do CSS. O
+  achado sólido é a PERSISTÊNCIA. Isolar o incremento do CSS exige controle
+  pareado por volatilidade recente (follow-up).
+
+**Contraste central da agenda**: o CSS FALHA como preditor de seleção (a24) mas
+o movimento sob alinhamento PERSISTE como fenômeno concorrente (a26b) — coerente
+com o processo real do trader (confirmar, não prever) e com a âncora (CSS
+atrasado). Não muda o produto a25 (seleção = ATR); no máximo o CSS vira leitura
+de confirmação/timing marcada como concorrente, nunca sinal preditivo.
+
 ## 2026-07-09 — a25: ranqueador de par operável (CSS-free) — o produto
 
 Ranqueador final com o que sobreviveu ao a24 (CSS excluído): modelo logístico
