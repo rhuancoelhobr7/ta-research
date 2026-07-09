@@ -5,6 +5,47 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-09 — Agenda a22-a26: export M15, ingestão e TAREFA 0
+
+Início da agenda de movimento/volatilidade (a22–a26 — escolher o PAR com maior
+amplitude esperada na janela, NÃO prever direção). Especificação pré-registrada
+em `a22_a26_ESPEC.md` (fornecida pelo dono).
+
+- **TAREFA -1 (`export_ta.mq5`)**: script MQL5 novo (o caminho Python `s3` já
+  existia, mas a spec pede export via tela p/ forçar histórico M15 profundo).
+  Rodado 1× pelo dono. Broker **Evalanch Ltd. / TenTrade-Server**. Exportou
+  **28/28 pares G8 em M15, ~248k barras (~10 anos, 2016-07→2026-07), 0 fallback
+  H1**. Campos OHLC+tick_volume+spread; `broker_info.csv` long-format com
+  offset servidor↔GMT e point/tick_size/digits por par.
+- **Ingestão (`s4_ingest_ta.py`)** → `data/raw/M15_{SYMBOL}.parquet` (tempo de
+  SERVIDOR naive, p/ casar com a paridade MQ5 e a19/a20) + `_meta_ta.json`.
+  pip = point×10 (JPY 0.01, resto 0.0001). Integridade: 0 NaN/dup/desordem.
+- **DST (atenção p/ a22)**: o offset servidor↔UTC NÃO é constante — UTC+2
+  inverno / UTC+3 verão (DST dos EUA, já documentado na Fase 0). `broker_info`
+  capturou só o instante atual (verão, 10799s≈+3h). Conversão sessão↔UTC no a22
+  deve ser DST-aware; "meia-noite servidor = 17:00 NY" é estável nos dois lados.
+- **TAREFA 0 (`t0_normalize.py`)**: `val` bruto + percentil rolante CAUSAL
+  (janelas 100/200/500, POR TF, sem lookahead) → `pct` 0-100, recriando a escala
+  do site currencystrengthzone. **Dois motores em paralelo** (decisão do dono):
+  `screen` (css_screen v2.20 — o CSS da tela, o PRODUTO) e `cssm` (cssm_engine —
+  comparação/ablação no a24). TFs M15/H1/H4/D1/W1/MN reamostrados de M15.
+  Saída em `data/derived/css_{engine}_{tf}.parquet`.
+- **Validação de paridade**: css_screen H1 (reamostrado de M15) vs
+  `css_parity_H1.csv` congelado → **max|dif|=5e-9** (exato). Pipeline fiel.
+- **Limitação MN**: 10 anos = 121 barras mensais; pct com janela ≥100 é
+  quase inútil no MN (e marginal no W1). O alinhamento P8 nos TFs longos terá
+  que usar o `val`/sinal, não o pct rolante — a decidir no a24.
+- **Achado do caso-âncora (GBP/JPY 08/07)** — o mais importante: o par teve
+  132 pips range / +101 net (dia limpo, traj 0.77), mas o CSS é
+  **CONCORRENTE/ATRASADO, não preditivo**. Na virada de NY (~12:00 UTC) o
+  css_screen de curto prazo mostrava **GBP FRACO** (H1 pct 5.5), com divergência
+  D1(forte)↔H1(fraco); GBP só "acende" (pct 76→93) das 17→20 UTC, DEPOIS do
+  movimento. Confirma a distinção central da agenda: a âncora é confirmação em
+  andamento (a26b), não setup preditivo (a24). Sugere que P8 pré-abertura terá
+  poder preditivo fraco — o nulo que a agenda foi feita p/ detectar. O "GBP=100
+  em todos os TFs" da spec é a escala do SITE (≠ nosso pct rolante) e ocorreu
+  pós-movimento, não na abertura.
+
 ## 2026-07-04 — Fase 0: dados e fuso
 
 - Exportados 28 pares G8 do MT5 (M5 2 anos + D1 4 anos) via `s0_export_mt5.py`.
