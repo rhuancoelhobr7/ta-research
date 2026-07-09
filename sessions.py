@@ -26,11 +26,23 @@ from __future__ import annotations
 
 import pandas as pd
 
-# janelas de sessão em HORA UTC [ini, fim)  — fim exclusivo
+# janelas de sessão em HORA UTC [ini, fim)  — fim exclusivo.
+# SESSIONS: canônicas (SE SOBREPÕEM, como as sessões reais) — uso DESCRITIVO
+# (a22, intensidade por sessão). NÃO usar p/ afirmação preditiva (vazaria).
 SESSIONS: dict[str, tuple[int, int]] = {
     "tokyo":   (0, 9),
     "londres": (7, 16),
     "ny":      (12, 21),
+    "overlap": (13, 16),
+}
+# SEQ_SESSIONS: partição ORDENADA e SEM SOBREPOSIÇÃO — uso PREDITIVO (a23):
+# asia fecha 07:00 antes de londres abrir; londres fecha 13:00 antes de ny.
+# Assim "range de asia" é conhecido quando londres começa (sem lookahead).
+# overlap (13-16) é sub-janela de ny; medido à parte p/ a Q5.
+SEQ_SESSIONS: dict[str, tuple[int, int]] = {
+    "asia":    (0, 7),
+    "londres": (7, 13),
+    "ny":      (13, 21),
     "overlap": (13, 16),
 }
 SERVER_MINUS_ET_HOURS = 7   # hora do servidor = ET + 7h
@@ -54,31 +66,34 @@ def add_utc(df: pd.DataFrame) -> pd.DataFrame:
     return out[out["utc"].notna()]
 
 
-def session_of(utc: pd.Series) -> pd.DataFrame:
-    """Máscara booleana por sessão (uma coluna por sessão; overlap ⊂ londres∩ny).
+def session_of(utc: pd.Series, windows: dict[str, tuple[int, int]] = SESSIONS
+               ) -> pd.DataFrame:
+    """Máscara booleana por sessão (uma coluna por sessão).
 
-    Uma barra pode pertencer a mais de uma sessão (ex.: 14:00 UTC está em
-    londres, ny E overlap) — cada sessão é medida independentemente."""
+    Uma barra pode pertencer a mais de uma sessão quando `windows` se sobrepõem
+    (ex.: SESSIONS) — cada sessão é medida independentemente."""
     h = utc.dt.hour
-    return pd.DataFrame({s: (h >= a) & (h < b) for s, (a, b) in SESSIONS.items()},
+    return pd.DataFrame({s: (h >= a) & (h < b) for s, (a, b) in windows.items()},
                         index=utc.index)
 
 
-def session_ranges(df: pd.DataFrame, pip: float) -> pd.DataFrame:
+def session_ranges(df: pd.DataFrame, pip: float,
+                   windows: dict[str, tuple[int, int]] = SESSIONS) -> pd.DataFrame:
     """Agrega range/movimento por (dia-UTC, sessão) p/ UM par.
 
-    df: OHLC(V) indexado por tempo de SERVIDOR. Retorna DataFrame long com
-    colunas: date (dia-UTC), session, range_pips, net_pips, traj (|net|/range),
-    n_bars, tick_vol. range = (max high − min low)/pip; net = (close_last −
-    open_first)/pip; traj = |net|/range (1=limpo, ~0.5=choppy — métrica do P9).
+    df: OHLC(V) indexado por tempo de SERVIDOR. `windows`: SESSIONS (descritivo)
+    ou SEQ_SESSIONS (preditivo). Retorna DataFrame long com colunas: date
+    (dia-UTC), session, range_pips, net_pips, traj (|net|/range), n_bars,
+    tick_vol. range = (max high − min low)/pip; net = (close_last − open_first)/
+    pip; traj = |net|/range (1=limpo, ~0.5=choppy — métrica do P9).
     """
     d = add_utc(df)
     if d.empty:
         return pd.DataFrame()
     day = d["utc"].dt.normalize()
-    masks = session_of(d["utc"])
+    masks = session_of(d["utc"], windows)
     rows = []
-    for s in SESSIONS:
+    for s in windows:
         sub = d[masks[s]]
         if sub.empty:
             continue
@@ -97,3 +112,17 @@ def session_ranges(df: pd.DataFrame, pip: float) -> pd.DataFrame:
         rows.append(agg.reset_index())
     return (pd.concat(rows, ignore_index=True)
             if rows else pd.DataFrame())
+
+
+def daily_range(df: pd.DataFrame, pip: float) -> pd.DataFrame:
+    """Range/net do DIA-UTC inteiro p/ UM par (base da fração da Q5)."""
+    d = add_utc(df)
+    if d.empty:
+        return pd.DataFrame()
+    g = d.groupby(d["utc"].dt.normalize())
+    out = pd.DataFrame({
+        "day_range": (g["high"].max() - g["low"].min()) / pip,
+        "day_net": (g["close"].last() - g["open"].first()) / pip,
+    })
+    out.index.name = "date"
+    return out

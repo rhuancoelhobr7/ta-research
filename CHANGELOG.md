@@ -46,6 +46,33 @@ em `a22_a26_ESPEC.md` (fornecida pelo dono).
   em todos os TFs" da spec é a escala do SITE (≠ nosso pct rolante) e ocorreu
   pós-movimento, não na abertura.
 
+## 2026-07-09 — a23: inter-sessão (o OURO — resultado POSITIVO)
+
+Autocorrelação de volatilidade entre sessões, com partição ORDENADA sem
+sobreposição (`SEQ_SESSIONS`: asia[00-07)/londres[07-13)/ny[13-21) UTC — asia
+fecha antes de londres abrir, sem lookahead). Split 70/30, métricas no TESTE,
+thresholds do treino, bootstrap semanal, BH na família Q4. `sessions.py`
+parametrizado por `windows` (SESSIONS descritivo × SEQ_SESSIONS preditivo).
+
+- **Q4 (o ouro)**: asia→londres Spearman mediana **0.342** (IC95 [0.316, 0.367]),
+  **acima** do baseline de persistência londres-ontem→hoje (**0.267**), com
+  **28/28 pares significativos após BH**, out-of-sample. Volatilidade tem
+  memória inter-sessão e o efeito Tokyo→Londres é real e robusto.
+- **Matriz de transição** (teste): asia_Q1→63% londres_Q1 (calma persiste);
+  asia_Q4→38% londres_Q4 (vol persiste). Diagonal pesada e monotônica.
+- **Q5**: overlap Londres∩NY captura **~49% do range diário em 3h** (ny 63%,
+  londres 59%, asia 45% — não somam 1, são max-min de subconjuntos aninhados).
+- **Q6**: "mola comprimida" **REFUTADA** — londres cresce monotônico com o
+  quartil de asia (Q1 0.70 → Q4 1.03); asia apertada prevê londres abaixo da
+  mediana (a calma continua), não expansão.
+- **Q7**: fator asia da moeda NÃO agrega sobre o range asia do próprio par
+  (r_fator 0.19-0.43 < r_próprio 0.40-0.64) — null p/ lead-lag entre moedas.
+
+**Consequência p/ a regra de parada (spec)**: já existe um ranqueador de range
+utilizável SEM CSS (ATR/range de sessão + Tokyo→Londres). O a24 (CSS) agora tem
+um baseline ALTO a bater; combinado com o achado da âncora (CSS concorrente, não
+preditivo), a expectativa é que P8 pré-abertura adicione pouco — a testar.
+
 ## 2026-07-09 — a22: mapa descritivo de sessões
 
 `sessions.py` (framework reutilizável a22–a26): conversão servidor→UTC
