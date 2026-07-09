@@ -86,11 +86,12 @@ def targets_baselines() -> pd.DataFrame:
 # 2. Estado do CSS na virada (sem lookahead)
 # ----------------------------------------------------------------------------
 
-def css_state_at_turns(dates: pd.DatetimeIndex, pct_col: str) -> pd.DataFrame:
+def css_state_at_turns(dates: pd.DatetimeIndex, pct_col: str,
+                       turn_h: int = TURN_H) -> pd.DataFrame:
     """Para cada dia, val/pct/breadth por moeda em cada TF na barra fechada
-    ANTES de 13:00 UTC. merge_asof backward EXCLUSIVO (não pega a barra da
-    abertura)."""
-    turns = pd.DataFrame({"turn": pd.to_datetime(dates) + pd.Timedelta(hours=TURN_H)})
+    ANTES de `turn_h`:00 UTC. merge_asof backward EXCLUSIVO (não pega a barra da
+    abertura). turn_h=13 (virada NY, a24) ou 0 (manhã pré-Tokyo, a26)."""
+    turns = pd.DataFrame({"turn": pd.to_datetime(dates) + pd.Timedelta(hours=turn_h)})
     turns = turns.sort_values("turn").reset_index(drop=True)
     out = turns.copy()
     for tf in TFS:

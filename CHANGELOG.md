@@ -5,6 +5,28 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-09 — a26: anatomia dos dias valiosos vs mortos (fecha a agenda)
+
+Nível de moeda. Atividade = média do range normalizado dos 7 pares da moeda;
+líder = mais ativa. "Dia com destaque" = líder ≥1.5× a norma = **39%** dos dias
+(sensível ao threshold; o "~88%" da spec era a métrica de tendência absoluta do
+projeto CSSM, não de range). Estado CSS de manhã (pré-Tokyo 00:00 UTC, sem
+lookahead).
+
+- **Q11**: a líder do dia é identificável de manhã? Acerto pela moeda mais
+  extrema no CSS de manhã **18.1%** (acaso 12.5%); pela líder de ontem 21.1%.
+  → a líder NÃO é antecipável — confirma o a24.
+- **Q12**: dias mortos têm assinatura? Dispersão do ranking CSS de manhã
+  destaque 19.0 vs morto 18.1 — diferença ínfima; sem sinal prévio claro de
+  "ficar de fora".
+- **Q13**: persistência de liderança 18.6% (acaso 12.5%) — marginal, ~nula
+  (coerente com a persistência-dia-a-dia nula já achada no projeto irmão).
+
+Síntese: o dia/moeda valioso não é previsível pelo estado CSS de manhã. Fecha a
+agenda a22-a26 de forma coerente: seleção por range = ATR de sessão (a25); CSS
+só tem dimensão concorrente (a26b), nunca preditiva. a26 não introduz primitiva
+estatística nova (composição de idxmax/std/shift + funções já testadas).
+
 ## 2026-07-09 — a26b: CSS como confirmação concorrente — PERSISTE (não nulo)
 
 Última chance do CSS, na dimensão NÃO-preditiva: dado alinhamento ativo em T
