@@ -5,6 +5,30 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-10 — a29: curva de detecção da moeda líder (a pergunta central)
+
+Acurácia de detecção da líder do dia x tempo desde a abertura, por indicador
+(CSS/CSSM/site-pct) x TF (M5/M15/H1/H4) x régua (A exata / B top-3). Verdade =
+líder por preço no fechamento. Indicadores recomputados dos M5 (3 anos, 237 dias
+de teste OOS). MÉTODO v1: barras fechadas (cada TF atualiza no fechamento da sua
+barra — capta o trade-off rápido/lento; forming-bar = refinamento v2). Custo do
+atraso (fração do range do dia já feito) sobreposto. BH 5% sobre as 96 células.
+
+- **Q10 (30 min de Tóquio)**: detecção no ACASO em todos os indicadores/TFs
+  (top-3 ~0.38 = acaso; régua A ~0.13 = acaso). A intuição dos "30 min" não se
+  sustenta.
+- **Custo do atraso é baixo**: range do dia sobe devagar — 18% aos 30 min, 40%
+  às 4h, 53% às 8h. Sobra movimento mesmo detectando tarde.
+- **Régua A (líder exata): NULA** — nunca utilizável (~0.30 máx às 8h).
+- **Régua B (top-3): sinal real, precoce e MODESTO** — trade-off ordenado
+  confirmado: **M5 bate o acaso (BH, OOS) aos 90 min** (acc 0.48 vs 0.375, só
+  26% do range feito), M15 aos 180 min, H1 aos 360 min, **H4 nunca**. Fortalece
+  a ~0.6 às 4-6h. 29/96 células sobrevivem a BH.
+- **Veredito**: não dá pra cravar a líder cedo, mas dá pra ESTREITAR para 3
+  candidatas já aos 90 min (M5) com 74% do movimento por vir — melhor que o nulo
+  pré-abertura do a24, coerente com o a31 (43% do campeão visível na asia). Edge
+  pequeno: badge probabilístico com latência conhecida, nunca sinal de T0.
+
 ## 2026-07-10 — a31: o par campeão dentro da moeda preponderante
 
 Dada a moeda LÍDER do dia (preponderante.py), qual dos 7 pares anda mais?
