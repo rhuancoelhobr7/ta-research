@@ -5,6 +5,26 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-10 — a32: matriz completa de autocorrelação de range entre sessões
+
+Fecha o a23 (que só olhou Tóquio->Londres->NY). Sequência asia->londres->ny->
+asia(dia+1); matriz 3x3 "de sessão X p/ a próxima Y" (inclui wrap NY->Tóquio
+d+1). Spearman por par, out-of-sample (30% finais), IC bootstrap em blocos.
+
+- **Q20/Q21**: TODAS as 9 células positivas e significativas (0.26-0.34, IC não
+  cruza 0) — a volatilidade gruda em QUALQUER transição, não só Tóquio->Londres.
+  Adjacentes mais fortes: asia->londres 0.341, londres->ny 0.337 (iguais).
+- **Q22**: NY->Tóquio(d+1) Spearman **0.273** IC [0.247, 0.301] = **7.4%** da
+  variância de rank compartilhada — a vol de NY VAZA para a abertura asiática
+  seguinte (efeito real, porém menor que o adjacente intradia).
+- **Q23 (não-monotônico)**: dist1=0.337 > dist3=0.281 > dist2=0.265. O salto no
+  dist3 (mesma sessão no dia seguinte, ex. asia->asia 0.311) acima do dist2
+  revela SAZONALIDADE de sessão — a sessão correlaciona com ela mesma no dia
+  seguinte mais que com a sessão 2 slots à frente.
+
+Consolida o achado transversal da bateria: RANGE/volatilidade tem memória forte
+e pervasiva (a23/a32); DIREÇÃO/liderança não (a28 Q3/Q4).
+
 ## 2026-07-10 — Bateria a28-a32: definições compartilhadas + a28
 
 Nova bateria (spec `a28_a32_ESPEC.md`): a moeda preponderante (a dos ~88%),
