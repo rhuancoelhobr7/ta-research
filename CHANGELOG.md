@@ -5,6 +5,33 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-10 — Bateria a28-a32: definições compartilhadas + a28
+
+Nova bateria (spec `a28_a32_ESPEC.md`): a moeda preponderante (a dos ~88%),
+curva de detecção, volume, par campeão e a matriz completa de sessões. Constrói
+sobre a infra do a22-a26 (mergeada no main via PR #17). M5 exportado à parte
+(InpM5Years) p/ a29/a30.
+
+- **`preponderante.py`** (definições compartilhadas, por PREÇO, não pelo
+  indicador): `currency_strength` — perfil das 8 moedas a partir dos net-moves
+  dos 28 pares (dirmove = ±net/ATR conforme base/cotada); `leaders` —
+  líder(mais forte)/anti-líder(mais fraca)/preponderante; `regua_acerto` — A
+  (líder exata) vs B (top-2/3). Testado.
+- **a28 (comportamento por sessão)**: 3116 dias, janelas asia/londres/ny + dia.
+  - **Q1**: consistência direcional sozinha é quase universal (líder bate >=6/7
+    em 98% dos dias, 7/7 em 85%) — o "~88%" da tese só aparece com MAGNITUDE
+    (7/7 E forca>=0.5 ATR = 62%). Direção sozinha não seleciona dia; magnitude sim.
+  - **Q2**: lidera por força 50% / fraqueza 50%; viés por moeda confirma o
+    folclore — **JPY** anti-líder 61%, CHF 56% (lideram por FRAQUEZA); AUD 43%,
+    GBP 44% (por FORÇA).
+  - **Q3**: continuidade de liderança entre sessões ~13.5% (acaso 12.5%) —
+    Londres/NY criam líder novo ~86% dos dias. A liderança DIRECIONAL não gruda
+    (contraste com o a23: RANGE gruda, direção não).
+  - **Q4**: líder do dia = líder de ontem em 14% (~acaso). Meia-vida curta.
+  - **Q5 (forte)**: força da líder cresce monotônica com a consistência —
+    4/7=0.24, 5/7=0.29, 6/7=0.46, **7/7=0.74** (~3x). O 7/7 limpo é um dia
+    materialmente maior: "quão preponderante" importa muito.
+
 ## 2026-07-09 — a26: anatomia dos dias valiosos vs mortos (fecha a agenda)
 
 Nível de moeda. Atividade = média do range normalizado dos 7 pares da moeda;
