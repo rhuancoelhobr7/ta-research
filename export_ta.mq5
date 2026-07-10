@@ -27,9 +27,10 @@
 #property version   "1.00"
 #property strict
 
-input int  InpYears        = 10;     // anos de historico (min util ~5)
+input bool InpExportM15    = true;   // exportar M15 (base). DESLIGUE p/ so M5 (rapido)
+input int  InpYears        = 10;     // anos de historico M15 (min util ~5)
 input int  InpMinBarsM15   = 30000;  // se M15 vier abaixo disto, cai p/ H1 no par
-input int  InpM5Years      = 0;      // >0 tambem exporta M5 desses ultimos anos (a26b); 0 = pula
+input int  InpM5Years      = 3;      // >0 exporta M5 desses ultimos anos (a29/a30); 0 = pula
 input int  InpMaxLoadTries = 40;     // tentativas de espera do download assincrono
 input int  InpLoadSleepMs  = 400;    // pausa entre tentativas (ms)
 
@@ -144,15 +145,18 @@ void OnStart()
           if(SymbolSelect(cand[k],true)){ sym=cand[k]; break; }
         if(sym==""){ Print("export_ta: par ausente ",cand[0],"/",cand[1]); missing++; continue; }
 
-        // M15 primeiro; se historico raso, cai p/ H1 nesse par
-        int wrote=ExportPair(sym,PERIOD_M15,from,now);
-        if(wrote>=InpMinBarsM15){ okM15++; }
-        else
+        // M15 primeiro (se InpExportM15); se historico raso, cai p/ H1 nesse par
+        if(InpExportM15)
         {
-           if(wrote>0) Print("export_ta: ",sym," M15 raso (",wrote," barras) -> fallback H1");
-           int wh=ExportPair(sym,PERIOD_H1,from,now);
-           if(wh>0){ okH1++; MetaRow(sym,"m15_fallback","H1"); }
-           else { Print("export_ta: ",sym," sem M15 nem H1 utilizavel"); missing++; continue; }
+           int wrote=ExportPair(sym,PERIOD_M15,from,now);
+           if(wrote>=InpMinBarsM15){ okM15++; }
+           else
+           {
+              if(wrote>0) Print("export_ta: ",sym," M15 raso (",wrote," barras) -> fallback H1");
+              int wh=ExportPair(sym,PERIOD_H1,from,now);
+              if(wh>0){ okH1++; MetaRow(sym,"m15_fallback","H1"); }
+              else { Print("export_ta: ",sym," sem M15 nem H1 utilizavel"); missing++; continue; }
+           }
         }
 
         if(InpM5Years>0)
