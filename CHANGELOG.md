@@ -5,6 +5,31 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-10 — a30: volume e momentum da preponderante (fecha a bateria)
+
+Sinais M5 cumulativos no dia (sem lookahead): volume = tick-volume normalizado
+somado nos 7 pares da moeda; momentum = índice sintético − abertura (COM SINAL).
+Detecção da líder (top-3) x tempo + BH, vs o css do a29. 237 dias OOS.
+
+- **Q11**: a líder fica no percentil 62% de volume (pouco acima da mediana).
+- **Q12**: percentil 100% de momentum no fim do dia (a líder = quem mais subiu,
+  ~por definição).
+- **Q13 (crucial)**: **momentum de preço detecta a líder aos 90 min — o MESMO
+  tempo do css M5** — e mais forte depois (top-3 0.63 às 4h). Logo o **CSS não
+  agrega nada sobre o preço bruto** (é uma transformação dele). O **volume NUNCA
+  detecta a líder** (não bate o acaso): é CEGO À DIREÇÃO — marca a moeda mais
+  ativa, que é a líder OU a anti-líder. Não acende antes do preço como preditor
+  da líder.
+- **Q14 (ablação)**: volume não ajuda a escolher a líder (direção-cego) e o
+  momentum já iguala o CSS — nada novo entra. Reforça o tema: o sinal está no
+  PREÇO; CSS é transformação, não informação extra; volume é atividade, não
+  direção.
+
+Fecha a bateria a28-a32: o único sinal precoce utilizável é ESTREITAR para
+top-3 via preço/CSS aos ~90 min (a29) com o par provável = líder×anti-líder
+(a31); volume não agrega; matriz de sessões consolidada (a32); direção não
+persiste, magnitude sim (a28).
+
 ## 2026-07-10 — a29: curva de detecção da moeda líder (a pergunta central)
 
 Acurácia de detecção da líder do dia x tempo desde a abertura, por indicador
