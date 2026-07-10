@@ -5,6 +5,32 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-10 — a31: o par campeão dentro da moeda preponderante
+
+Dada a moeda LÍDER do dia (preponderante.py), qual dos 7 pares anda mais?
+Campeão ABS = maior range em pips; REL = maior range/ATR (controla largura
+estrutural). 3116 dias. (Corrigido bug: a lista de pares do líder usava
+combinações em ordem G8 — "USDEUR" — em vez dos símbolos reais do broker;
+enviesava p/ EUR/GBP. Agora usa as colunas reais.)
+
+- **Q15**: campeão claro (>=1.3x o 2º) em só 37% dos dias; concentra mediana 23%
+  do range dos 7 — movimento é distribuído na maioria dos dias.
+- **Q16**: o campeão anda **+63 pips / +0.67 ATR** a mais que a média dos outros
+  6 (p90 +142 pips / +1.26 ATR). Resposta direta do Carlos.
+- **Q17**: par campeão por líder é concentrado mas não fixo (top-share 17-31%):
+  USD->USDJPY 31%, JPY->USDJPY 30%, EUR->EURCHF 28%, CHF->CHFJPY 26%,
+  AUD->AUDNZD 23% — vários apontam p/ JPY (a anti-líder frequente do a28).
+- **Q18 (forte)**: o campeão REL é **líder×anti-líder em 55%** (baseline 1/7 =
+  14%); ABS 36%. A anti-líder resolve boa parte da seleção do par. CAVEAT: há
+  componente MECÂNICO — o par líder×anti-líder tem o maior diferencial de força,
+  logo tende ao maior movimento por construção; mas 55% (não 100%) e o controle
+  por ATR (REL) tornam a associação real e não trivial.
+- **Q19**: campeão do dia já é o campeão da sessão asia em **43%** (base 14%) —
+  parcialmente identificável cedo (a29 vai refinar com M5).
+
+Ressalva operacional: líder e anti-líder são conhecidas no FECHAMENTO
+(retrospecto); usar isto p/ seleção exige identificá-las cedo — o que o a29 mede.
+
 ## 2026-07-10 — a32: matriz completa de autocorrelação de range entre sessões
 
 Fecha o a23 (que só olhou Tóquio->Londres->NY). Sequência asia->londres->ny->
