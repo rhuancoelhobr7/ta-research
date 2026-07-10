@@ -5,6 +5,128 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-10 — a30: volume e momentum da preponderante (fecha a bateria)
+
+Sinais M5 cumulativos no dia (sem lookahead): volume = tick-volume normalizado
+somado nos 7 pares da moeda; momentum = índice sintético − abertura (COM SINAL).
+Detecção da líder (top-3) x tempo + BH, vs o css do a29. 237 dias OOS.
+
+- **Q11**: a líder fica no percentil 62% de volume (pouco acima da mediana).
+- **Q12**: percentil 100% de momentum no fim do dia (a líder = quem mais subiu,
+  ~por definição).
+- **Q13 (crucial)**: **momentum de preço detecta a líder aos 90 min — o MESMO
+  tempo do css M5** — e mais forte depois (top-3 0.63 às 4h). Logo o **CSS não
+  agrega nada sobre o preço bruto** (é uma transformação dele). O **volume NUNCA
+  detecta a líder** (não bate o acaso): é CEGO À DIREÇÃO — marca a moeda mais
+  ativa, que é a líder OU a anti-líder. Não acende antes do preço como preditor
+  da líder.
+- **Q14 (ablação)**: volume não ajuda a escolher a líder (direção-cego) e o
+  momentum já iguala o CSS — nada novo entra. Reforça o tema: o sinal está no
+  PREÇO; CSS é transformação, não informação extra; volume é atividade, não
+  direção.
+
+Fecha a bateria a28-a32: o único sinal precoce utilizável é ESTREITAR para
+top-3 via preço/CSS aos ~90 min (a29) com o par provável = líder×anti-líder
+(a31); volume não agrega; matriz de sessões consolidada (a32); direção não
+persiste, magnitude sim (a28).
+
+## 2026-07-10 — a29: curva de detecção da moeda líder (a pergunta central)
+
+Acurácia de detecção da líder do dia x tempo desde a abertura, por indicador
+(CSS/CSSM/site-pct) x TF (M5/M15/H1/H4) x régua (A exata / B top-3). Verdade =
+líder por preço no fechamento. Indicadores recomputados dos M5 (3 anos, 237 dias
+de teste OOS). MÉTODO v1: barras fechadas (cada TF atualiza no fechamento da sua
+barra — capta o trade-off rápido/lento; forming-bar = refinamento v2). Custo do
+atraso (fração do range do dia já feito) sobreposto. BH 5% sobre as 96 células.
+
+- **Q10 (30 min de Tóquio)**: detecção no ACASO em todos os indicadores/TFs
+  (top-3 ~0.38 = acaso; régua A ~0.13 = acaso). A intuição dos "30 min" não se
+  sustenta.
+- **Custo do atraso é baixo**: range do dia sobe devagar — 18% aos 30 min, 40%
+  às 4h, 53% às 8h. Sobra movimento mesmo detectando tarde.
+- **Régua A (líder exata): NULA** — nunca utilizável (~0.30 máx às 8h).
+- **Régua B (top-3): sinal real, precoce e MODESTO** — trade-off ordenado
+  confirmado: **M5 bate o acaso (BH, OOS) aos 90 min** (acc 0.48 vs 0.375, só
+  26% do range feito), M15 aos 180 min, H1 aos 360 min, **H4 nunca**. Fortalece
+  a ~0.6 às 4-6h. 29/96 células sobrevivem a BH.
+- **Veredito**: não dá pra cravar a líder cedo, mas dá pra ESTREITAR para 3
+  candidatas já aos 90 min (M5) com 74% do movimento por vir — melhor que o nulo
+  pré-abertura do a24, coerente com o a31 (43% do campeão visível na asia). Edge
+  pequeno: badge probabilístico com latência conhecida, nunca sinal de T0.
+
+## 2026-07-10 — a31: o par campeão dentro da moeda preponderante
+
+Dada a moeda LÍDER do dia (preponderante.py), qual dos 7 pares anda mais?
+Campeão ABS = maior range em pips; REL = maior range/ATR (controla largura
+estrutural). 3116 dias. (Corrigido bug: a lista de pares do líder usava
+combinações em ordem G8 — "USDEUR" — em vez dos símbolos reais do broker;
+enviesava p/ EUR/GBP. Agora usa as colunas reais.)
+
+- **Q15**: campeão claro (>=1.3x o 2º) em só 37% dos dias; concentra mediana 23%
+  do range dos 7 — movimento é distribuído na maioria dos dias.
+- **Q16**: o campeão anda **+63 pips / +0.67 ATR** a mais que a média dos outros
+  6 (p90 +142 pips / +1.26 ATR). Resposta direta do Carlos.
+- **Q17**: par campeão por líder é concentrado mas não fixo (top-share 17-31%):
+  USD->USDJPY 31%, JPY->USDJPY 30%, EUR->EURCHF 28%, CHF->CHFJPY 26%,
+  AUD->AUDNZD 23% — vários apontam p/ JPY (a anti-líder frequente do a28).
+- **Q18 (forte)**: o campeão REL é **líder×anti-líder em 55%** (baseline 1/7 =
+  14%); ABS 36%. A anti-líder resolve boa parte da seleção do par. CAVEAT: há
+  componente MECÂNICO — o par líder×anti-líder tem o maior diferencial de força,
+  logo tende ao maior movimento por construção; mas 55% (não 100%) e o controle
+  por ATR (REL) tornam a associação real e não trivial.
+- **Q19**: campeão do dia já é o campeão da sessão asia em **43%** (base 14%) —
+  parcialmente identificável cedo (a29 vai refinar com M5).
+
+Ressalva operacional: líder e anti-líder são conhecidas no FECHAMENTO
+(retrospecto); usar isto p/ seleção exige identificá-las cedo — o que o a29 mede.
+
+## 2026-07-10 — a32: matriz completa de autocorrelação de range entre sessões
+
+Fecha o a23 (que só olhou Tóquio->Londres->NY). Sequência asia->londres->ny->
+asia(dia+1); matriz 3x3 "de sessão X p/ a próxima Y" (inclui wrap NY->Tóquio
+d+1). Spearman por par, out-of-sample (30% finais), IC bootstrap em blocos.
+
+- **Q20/Q21**: TODAS as 9 células positivas e significativas (0.26-0.34, IC não
+  cruza 0) — a volatilidade gruda em QUALQUER transição, não só Tóquio->Londres.
+  Adjacentes mais fortes: asia->londres 0.341, londres->ny 0.337 (iguais).
+- **Q22**: NY->Tóquio(d+1) Spearman **0.273** IC [0.247, 0.301] = **7.4%** da
+  variância de rank compartilhada — a vol de NY VAZA para a abertura asiática
+  seguinte (efeito real, porém menor que o adjacente intradia).
+- **Q23 (não-monotônico)**: dist1=0.337 > dist3=0.281 > dist2=0.265. O salto no
+  dist3 (mesma sessão no dia seguinte, ex. asia->asia 0.311) acima do dist2
+  revela SAZONALIDADE de sessão — a sessão correlaciona com ela mesma no dia
+  seguinte mais que com a sessão 2 slots à frente.
+
+Consolida o achado transversal da bateria: RANGE/volatilidade tem memória forte
+e pervasiva (a23/a32); DIREÇÃO/liderança não (a28 Q3/Q4).
+
+## 2026-07-10 — Bateria a28-a32: definições compartilhadas + a28
+
+Nova bateria (spec `a28_a32_ESPEC.md`): a moeda preponderante (a dos ~88%),
+curva de detecção, volume, par campeão e a matriz completa de sessões. Constrói
+sobre a infra do a22-a26 (mergeada no main via PR #17). M5 exportado à parte
+(InpM5Years) p/ a29/a30.
+
+- **`preponderante.py`** (definições compartilhadas, por PREÇO, não pelo
+  indicador): `currency_strength` — perfil das 8 moedas a partir dos net-moves
+  dos 28 pares (dirmove = ±net/ATR conforme base/cotada); `leaders` —
+  líder(mais forte)/anti-líder(mais fraca)/preponderante; `regua_acerto` — A
+  (líder exata) vs B (top-2/3). Testado.
+- **a28 (comportamento por sessão)**: 3116 dias, janelas asia/londres/ny + dia.
+  - **Q1**: consistência direcional sozinha é quase universal (líder bate >=6/7
+    em 98% dos dias, 7/7 em 85%) — o "~88%" da tese só aparece com MAGNITUDE
+    (7/7 E forca>=0.5 ATR = 62%). Direção sozinha não seleciona dia; magnitude sim.
+  - **Q2**: lidera por força 50% / fraqueza 50%; viés por moeda confirma o
+    folclore — **JPY** anti-líder 61%, CHF 56% (lideram por FRAQUEZA); AUD 43%,
+    GBP 44% (por FORÇA).
+  - **Q3**: continuidade de liderança entre sessões ~13.5% (acaso 12.5%) —
+    Londres/NY criam líder novo ~86% dos dias. A liderança DIRECIONAL não gruda
+    (contraste com o a23: RANGE gruda, direção não).
+  - **Q4**: líder do dia = líder de ontem em 14% (~acaso). Meia-vida curta.
+  - **Q5 (forte)**: força da líder cresce monotônica com a consistência —
+    4/7=0.24, 5/7=0.29, 6/7=0.46, **7/7=0.74** (~3x). O 7/7 limpo é um dia
+    materialmente maior: "quão preponderante" importa muito.
+
 ## 2026-07-09 — a26: anatomia dos dias valiosos vs mortos (fecha a agenda)
 
 Nível de moeda. Atividade = média do range normalizado dos 7 pares da moeda;

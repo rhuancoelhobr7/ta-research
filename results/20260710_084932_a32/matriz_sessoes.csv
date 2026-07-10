@@ -1,0 +1,10 @@
+de,para,dia+1,dist,spearman,ic_lo,ic_hi,rho2_%,n_pares
+asia,londres,False,1,0.3414,0.3142,0.3662,11.6525,28
+asia,ny,False,2,0.2687,0.2347,0.3059,7.2183,28
+asia,asia,True,3,0.3107,0.2853,0.3287,9.6523,28
+londres,ny,False,1,0.3369,0.303,0.3652,11.3501,28
+londres,asia,True,2,0.2652,0.2427,0.2876,7.0347,28
+londres,londres,True,3,0.2605,0.2248,0.2892,6.7869,28
+ny,asia,True,1,0.2729,0.2467,0.3013,7.4478,28
+ny,londres,True,2,0.2626,0.2468,0.2899,6.8937,28
+ny,ny,True,3,0.2812,0.2481,0.3415,7.9084,28

@@ -67,7 +67,7 @@ def csv_to_df(path: pathlib.Path) -> pd.DataFrame:
     return d
 
 
-def main(src: pathlib.Path) -> None:
+def main(src: pathlib.Path, tf: str = "M15") -> None:
     src = pathlib.Path(src)
     if not (src / "broker_info.csv").exists():
         raise SystemExit(f"broker_info.csv nao encontrado em {src}")
@@ -77,12 +77,12 @@ def main(src: pathlib.Path) -> None:
     off = int(gmeta["server_gmt_offset_sec"])
 
     symbols_meta: dict[str, dict] = {}
-    for csv in sorted(src.glob("*_M15.csv")):
-        sym = csv.stem.removesuffix("_M15")
+    for csv in sorted(src.glob(f"*_{tf}.csv")):
+        sym = csv.stem.removesuffix(f"_{tf}")
         df = csv_to_df(csv)
         if df.empty:
             print(f"s4: {sym} vazio, pulado"); continue
-        df.to_parquet(RAW / f"M15_{sym}.parquet")
+        df.to_parquet(RAW / f"{tf}_{sym}.parquet")
 
         info = per.get(sym, {})
         point = float(info.get("point", "nan"))
@@ -110,9 +110,12 @@ def main(src: pathlib.Path) -> None:
         "n_symbols": len(symbols_meta),
         "symbols": symbols_meta,
     }
-    (RAW / "_meta_ta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False),
-                                       encoding="utf-8")
-    print(f"s4: {len(symbols_meta)} pares -> data/raw/M15_*.parquet + _meta_ta.json"
+    # M15 e o meta canonico (_meta_ta.json, lido por a25/a28...); outros TFs
+    # gravam meta proprio (pips sao symbol-level, iguais entre TFs).
+    meta_name = "_meta_ta.json" if tf == "M15" else f"_meta_ta_{tf}.json"
+    (RAW / meta_name).write_text(json.dumps(meta, indent=2, ensure_ascii=False),
+                                 encoding="utf-8")
+    print(f"s4: {len(symbols_meta)} pares -> data/raw/{tf}_*.parquet + {meta_name}"
           f"  (offset servidor {off}s)")
 
 
@@ -120,4 +123,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default=str(DEFAULT_SRC),
                     help="pasta ta_export/ do MT5")
-    main(ap.parse_args().src)
+    ap.add_argument("--tf", default="M15", help="timeframe a ingerir (M15, M5)")
+    a = ap.parse_args()
+    main(a.src, a.tf)
