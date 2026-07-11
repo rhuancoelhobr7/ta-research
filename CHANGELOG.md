@@ -5,6 +5,23 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — a36: direção calendário×preço — combinação NULA, preço sozinho vive
+
+Combina a18 (notícia HIGH) e a17 (confirmação de preço em T0+k). Calendário
+2024-07→2026-07, 824 obs-evento por par (k,fim). Exploratório, não toca holdout.
+
+- **Combinação calendário×preço: NULA.** combinado 0.572 (k=2h) / 0.618 (k=4h)
+  NÃO supera só-preço 0.575 / 0.642 (no 4h é pior). Só-calendário (evento +
+  persistência) e persistência ficam ~0.50 (acaso). Surpresa não ajuda (0.57/0.59).
+  → O calendário NÃO agrega sobre a confirmação de preço.
+- **Mas a confirmação de PREÇO sozinha é sinal real**: a direção de T0+4h sustenta
+  até 15h em **0.642** (bem acima de 0.50) — a17 reconfirmado independentemente.
+  A rota viva de direção é o PREÇO (momentum intradiário persiste), não o
+  calendário.
+
+Coerente com todo o projeto: o sinal está no preço. (Se a persistência de preço
+virar produto direcional, exige a35-bis próprio.)
+
 ## 2026-07-11 — a35: HOLDOUT — z-score@180 CONFIRMA (1º preditor OOS do projeto)
 
 Confirmação única no holdout PRISTINO [q50,q70) do M5 (154 dias, 2025-06 →
