@@ -49,3 +49,24 @@ mostrar antes — antes disso está no acaso.
 Antes de qualquer mudança no MQ5: reproduzir a curva do a29 na barra em formação
 (forming-bar, refinamento v2 — pode adiantar/atrasar a latência de 90 min) e
 revalidar OOS. Só então discutir o badge no indicador.
+
+---
+
+## Atualização (2026-07-11) — pós bateria a33-a37
+
+A cadeia deste documento foi testada ponta a ponta e revisada:
+- **a33**: a cadeia composta (top-3 → líder×anti → par) **NÃO se sustenta** —
+  P(candidato = par de maior range) 4.1% ≈ acaso, muito abaixo do baseline ATR
+  (29.8%). O "par sugerido = líder×anti" **cai** (o 55% do a31 era relativo aos
+  7 pares da líder, não o maior-range global).
+- **a35**: o único componente confirmado OOS é o **top-3 de MOEDAS por
+  z-score@180min** (holdout 0.506) — é DIREÇÃO (quais 3 moedas estão fortes às
+  3h), não seleção de par por amplitude.
+- **a37**: o "confirmação concorrente" do CSS (a26b) era clustering de
+  volatilidade — **cai** após pareamento. CSS é apenas descritivo.
+
+**Badge revisado**: no máximo, exibir o **top-3 de moedas fortes/fracas às ~3h**
+(z-score normalizado por vol da moeda, confirmado no holdout, edge modesto ~1.35×
+acaso), marcado probabilístico e com latência. NÃO sugerir "par candidato"
+(a33), NÃO usar CSS como sinal (descritivo). Amplitude de par continua = ATR de
+sessão (a25).

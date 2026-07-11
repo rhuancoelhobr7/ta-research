@@ -1,5 +1,18 @@
 # CSSM_Contexto — changelog do indicador
 
+## NOTA DE PESQUISA (2026-07-11) — CSS é APENAS DESCRITIVO (a37 fecha o a26b)
+
+O a26b sugeriu que o CSS servia como "confirmação concorrente" (movimento
+persiste após alinhamento, MFE 1.46× o controle). O **a37** refez com controle
+PAREADO por volatilidade prévia: o incremento **SOME** (1.46× → **1.08×**) — o
+alinhamento ocorre em regime mais volátil (vol prévia 47 vs 27), e o "extra" era
+CLUSTERING DE VOLATILIDADE, não valor do CSS. **Não há badge de confirmação
+concorrente.** Somado ao restante (a24/a29/a30/a34: CSS não prevê e cola nas
+métricas de preço), o veredito consolidado é: **o CSS/CSSM é DESCRITIVO** (leitura
+de força/geometria do preço), sem valor incremental preditivo NEM concorrente.
+Nenhum badge de sinal entra no indicador.
+
+
 ## v1.40 (2026-07-05) — camada relacional (matriz 8×8, breadth, força espúria)
 
 Motivação (pesquisa a11, H1/2 anos, dias research): o índice sintético, por

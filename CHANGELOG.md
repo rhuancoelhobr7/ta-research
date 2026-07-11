@@ -5,6 +5,24 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — a37: a26b com controle vol-pareado — incremento SOME (CSS descritivo)
+
+Fecha o caveat do a26b. Cada evento de alinhamento pareado a um controle
+NÃO-alinhado com volatilidade PRÉVIA semelhante (decil de range das barras
+anteriores, por par).
+
+- Alinhamento ocorre em regime MUITO mais volátil: vol prévia **47 vs 27** do
+  controle bruto — o pareamento importa.
+- MFE: alinhado 16.8 | controle bruto 11.5 (**1.46×**, o a26b) | controle
+  **PAREADO por vol 15.6 (1.08×)**.
+- **O incremento do CSS SOME após parear** (1.46×→1.08×). O "1.45×" do a26b era
+  CLUSTERING DE VOLATILIDADE, não valor do CSS.
+
+**Veredito**: o badge de "confirmação concorrente" CAI. O CSS/CSSM é **APENAS
+DESCRITIVO** — sem valor incremental preditivo (a24/a29/a30/a34) NEM concorrente
+(a37). Atualizados INDICATOR_CHANGELOG e a proposta de badge. Fecha a bateria
+a33-a37 e o arco de pesquisa do CSS.
+
 ## 2026-07-11 — a36: direção calendário×preço — combinação NULA, preço sozinho vive
 
 Combina a18 (notícia HIGH) e a17 (confirmação de preço em T0+k). Calendário
