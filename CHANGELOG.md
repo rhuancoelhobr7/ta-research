@@ -5,6 +5,24 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — a35-bis: persistência-de-preço direcional CONFIRMA OOS (com caveat)
+
+Confirmação do 2º sinal promissor do a36 (a confirmação de preço sozinha: sinal
+do Δíndice de C em T0+k sustenta até o fim). Regra com ZERO parâmetros livres
+(k=4h, fim=15h fixos do a17) — o holdout formal já foi consumido no a35, então
+confirma-se robustez + estabilidade + cauda recente [q70,fim).
+
+- **Robusto e estável OOS**: research 0.640 → cauda 0.646 (IC [0.622,0.668]
+  exclui 0.5, edge 104%); estável nos 4 blocos (0.63-0.65, todos IC>0.5);
+  monotônico no k (2h 0.575 < 3h 0.619 < 4h 0.642).
+- **CAVEAT de magnitude (importante)**: residual direcional após 4h = **+0.02**
+  do move típico do dia — por 4h quase todo o movimento LÍQUIDO já foi. O sinal
+  SUSTENTA (a moeda raramente inverte, ~65%) mas sobra pouco a capturar entrando
+  às 4h.
+- **Leitura honesta**: é sinal de CONFIRMAÇÃO/MANUTENÇÃO de direção (não reverte),
+  NÃO edge de entrada tardia. Útil para segurar posição já aberta, não para abrir
+  às 4h. Coerente: o sinal está no preço, mas chega quando o grosso já passou.
+
 ## 2026-07-11 — a37: a26b com controle vol-pareado — incremento SOME (CSS descritivo)
 
 Fecha o caveat do a26b. Cada evento de alinhamento pareado a um controle
