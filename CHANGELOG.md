@@ -5,6 +5,31 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — a34: varredura de métricas (EXPLORATÓRIO) — candidatos marginais
+
+Grade pré-registrada: 70 células (8 famílias; família 7 range/vol em 2 variantes;
+famílias de retorno 1-6/8 têm variante única pois o índice sintético = média dos
+retornos orientados dos 7 pares por construção) × 7 janelas × régua B. Research =
+393 dias (<q50); holdout [q50,q70) INTOCADO. BH + reality check por permutação
+(200 perms, máximo entre células) + controle.
+
+- **Reality check p95 = 0.461**; **13 células sobrevivem** (BH + reality), TODAS
+  em janelas LONGAS (90/120/180 min) — nada precoce passa (confirma a29/a33: sem
+  detecção precoce).
+- **Top-1: z-score@180min = 0.508** (régua B top-3). Cluster @180: css 0.487,
+  cssm 0.485, momentum/rank/disp/ER 0.482 — TODAS coladas. **CSS/CSSM
+  indistinguíveis das métricas de preço** → o controle confirma o a30 de forma
+  independente (o CSS é transformação do preço).
+- Régua A (líder exata) fraca em tudo (~0.24 máx). Edge do candidato é pequeno
+  (0.508 vs 0.461 do reality check = +0.047).
+- Caveat: o z-score usa média/desvio do research (levemente in-sample) — pode
+  inflar marginalmente vs momentum/css (0.482-0.487); o a35 no holdout, com a
+  regra congelada, decide.
+
+**Candidato para o a35 (top-1 e top-3, declarados ANTES de rodar o holdout):**
+top-1 = **z-score@180min**; top-3 = {z-score@180, css@180, cssm@180}. Nenhuma
+conclusão do a34 isolado — só vira achado se sobreviver ao a35.
+
 ## 2026-07-11 — a33: cadeia composta — NÃO SE SUSTENTA (negativo pré-registrado)
 
 Cadeia ponta a ponta (momentum T0+90min → líder×anti → par), 631 dias de
