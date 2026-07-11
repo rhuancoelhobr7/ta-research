@@ -5,6 +5,31 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — a33: cadeia composta — NÃO SE SUSTENTA (negativo pré-registrado)
+
+Cadeia ponta a ponta (momentum T0+90min → líder×anti → par), 631 dias de
+research (holdout intocado), spread real por par. **Resultado sem suavização:**
+
+- **P(par candidato = par de maior range do dia) = 4.1%** — colado no acaso
+  (1/28 = 3.6%) e MUITO abaixo do baseline "maior ATR de sessão" (a25) = **29.8%**
+  (persistência 23.8%). A cadeia NÃO bate nenhum baseline.
+- **Excesso de ATR do candidato = −0.08** (abaixo da média dos 28!) vs +0.67 do
+  a31 conhecendo a líder. Range mediano do candidato 72.7 pips vs 143 do baseline
+  ATR — captura METADE.
+- **Decomposição do colapso**: (i) a líder estimada = verdadeira em só 15.7%
+  (a29 régua A); (ii) MESMO com a líder correta, líder×anti é o maior-range em
+  só 10.1% — o "55%" do a31 era campeão DENTRO dos 7 pares da líder, NÃO o
+  maior-range entre os 28. As duas peças não compõem.
+- Custo: spread desprezível (~0.3 pip; range 178× spread) — o critério de custo
+  passa, mas P(=max) reprova.
+
+**Veredito pré-registrado: a cadeia NÃO se sustenta.** As peças positivas
+isoladas (a29 top-3, a31 par) não formam sistema quando compostas com a detecção
+real; o ATR de sessão (a25) sozinho domina. Responde a pergunta central da
+bateria: para MOVIMENTO/amplitude, não há sistema além do ATR de sessão. (a34
+ainda testa se OUTRA métrica detecta a moeda melhor que o momentum — mas o teto
+é limitado pelo achado (ii): líder×anti raramente é o maior-range global.)
+
 ## 2026-07-10 — MUDANÇA DE OBJETIVO + pré-registro da bateria a33-a37
 
 **Mudança de objetivo do projeto** (decisão do dono): não se busca mais
