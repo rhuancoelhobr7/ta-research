@@ -6,3 +6,5 @@ pytest>=8.0
 scikit-learn>=1.4
 # Somente Windows + terminal MT5 (fase 0):
 # MetaTrader5>=5.0.45
+# Somente p/ gerar o relatorio PDF (gen_a33_a37_report.py):
+# reportlab>=4.0
