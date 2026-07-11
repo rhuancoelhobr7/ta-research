@@ -5,6 +5,38 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — a38: valor ECONÔMICO — NENHUM sinal é operável (acurácia ≠ lucro)
+
+Teste de CUSTO sobre as duas regras JÁ CONGELADAS (a35 z-score@180; a35-bis
+persistência 4h->15h) — zero parâmetros livres, zero varredura. **Justificativa
+metodológica**: o holdout está ESGOTADO (a35 consumiu [q50,q70); a35-bis usou
+>=q70); aplicar um custo determinístico a uma regra congelada NÃO é data snooping
+(nenhum grau de liberdade ajustado contra os dados). `costs.py` novo (spread real
+por par do M5, slippage 0.1 pip/ponta, swap 0 intradiário, comissão 0).
+
+Estratégias (congeladas): A = long top-1 vs bottom-1 do z-score, fecha 15h
+(+ cesta dos 7 pares da top-1); B = long a moeda de maior |mov@4h| vs a mais
+oposta, fecha 15h (+ cesta). 786 dias, decomposto por fatia e ano.
+
+- **NENHUMA estratégia é viável** (expectativa líquida por trade, pips):
+  A_par -0.62 · A_cesta -1.21 · B_par -0.80 · **B_cesta +0.13 (IC [-2.29,+2.68]
+  inclui zero)**. Todas com IC cruzando zero; nenhuma bate o baseline aleatório
+  de forma robusta.
+- **A razão é mais funda que 'custo come o edge'**: a **acurácia direcional do
+  movimento CAPTURÁVEL (entrada->15h) é ~49-51% = moeda-ao-ar**. Os 0.506/0.646
+  do a35/a35-bis descreviam o estado JÁ FORMADO até o horário de entrada; o
+  RESIDUAL capturável é ruído (coerente com o +0.02 do a35-bis). Custo é só 2-3%
+  do bruto — não é o vilão; o BRUTO já é ~0.
+- **Sensibilidade ao custo**: mesmo com spread 0.5x nada fica robustamente
+  positivo (IC sempre inclui zero). Não é questão de spread — não há edge bruto.
+
+**Veredito (sem suavizar)**: os dois sinais confirmados OOS são fatos
+estatísticos reais sobre o PASSADO, não edges tradeáveis sobre o FUTURO. **O
+projeto NÃO produziu sinal direcional operável.** O único entregável prático
+permanece o ranqueador de AMPLITUDE por ATR de sessão (a25). **Próximo passo
+honesto** (registrado, não executado): validação PROSPECTIVA em dias novos — não
+há mais fatia pristina para testes retrospectivos.
+
 ## 2026-07-11 — a35-bis: persistência-de-preço direcional CONFIRMA OOS (com caveat)
 
 Confirmação do 2º sinal promissor do a36 (a confirmação de preço sozinha: sinal
