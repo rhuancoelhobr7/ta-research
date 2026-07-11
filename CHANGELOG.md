@@ -5,6 +5,56 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-10 — MUDANÇA DE OBJETIVO + pré-registro da bateria a33-a37
+
+**Mudança de objetivo do projeto** (decisão do dono): não se busca mais
+engenharia reversa do especialista. O objetivo agora é **acertar as moedas/pares
+de grande movimento DIRECIONAL**, usando os achados positivos (range tem
+memória — a23/a32; top-3 aos 90 min — a29; par = líder×anti-líder — a31; ATR de
+sessão — a25; calendário — a18) e evitando o nulo (CSS como preditor — a30 mostrou
+que é transformação do preço). Motivação: os positivos foram validados
+ISOLADAMENTE; a cadeia composta nunca foi medida ponta a ponta, e o a31 (55%)
+pressupõe conhecer a líder — que o a29 diz NÃO se conhecer (top-3 a 48%).
+
+**PRÉ-REGISTRO (escrito ANTES de qualquer resultado; código congelado por
+estudo, `pytest` verde a cada commit):**
+
+- **a33 — cadeia composta ponta a ponta, líquida de custo (CONFIRMATÓRIO).** Uma
+  execução, sem grade. Pipeline causal: T0+90min top-3 por momentum (código do
+  a29) → líder/anti do top-3 ESTIMADO → par = líder×anti (a31) → ATR de sessão
+  (a25). Métricas: P(par candidato = par de maior range do dia) vs 14% (a31) e
+  1/28; ATR extra vs demais; decomposição condicional a acertar a líder; LÍQUIDO
+  de custo (spread real por par, mediana do M5). Baselines: aleatório; maior ATR
+  de sessão; persistência (maior range de ontem). **Veredito pré-registrado**:
+  a cadeia "se sustenta" se bater TODOS os baselines E o range líquido > 2× o
+  spread mediano; senão, NÃO se sustenta.
+- **a34 — varredura de métricas (EXPLORATÓRIO).** Grade pré-registrada: 8
+  famílias (momentum, ret/ATR, EffRatio, z-score, rank cross-sec, dispersão,
+  range/vol, CSS/CSSM-controle) × 2 variantes (índice sintético / média dos 7
+  pares) × 7 janelas (5,15,30,60,90,120,180min) × 2 alvos (líder / top-3). BH
+  sobre a família INTEIRA + reality check por permutação + controle negativo +
+  70/30. **HOLDOUT INTOCADO.** Saída = candidato, não achado.
+- **a35 — confirmação no HOLDOUT (uma vez só).** Top-1 (e no máx top-3) células
+  do a34, sem re-otimizar. Critério: top-3 > acaso (0.375) com IC95 excluindo o
+  acaso, e não perder >25% do edge do research. Consome o holdout
+  (irreversível).
+- **a36 — direção: calendário (a18) × confirmação de preço (a17).** Evento HIGH
+  de C E preço confirmando em T0+k (2h,4h) → direção sustenta até 12h/15h. Só
+  vale se bater as DUAS peças isoladas + persistência + acaso. Calendário
+  disponível (2024-07+, com actual/forecast → surpresa). Holdout intocado.
+- **a37 — fechar o caveat do a26b: controle PAREADO por volatilidade.** Refazer
+  o a26b amostrando controles com vol realizada semelhante (matching por quantil
+  de ATR). Se o incremento do CSS sumir, o badge de "confirmação concorrente"
+  cai e o CSS fica APENAS descritivo.
+
+**CAVEAT DE HOLDOUT (a resolver antes do a35):** o holdout de `splits_days.py` é
+os últimos 20% dos dias. Mas a29/a30 avaliaram no último 30% (split 70/30),
+que SOBREPÕE esse holdout — logo o holdout de 20% NÃO está pristino para o a35.
+a34 usará SÓ os primeiros 80% (research) e o a35 confirmará nos últimos 20%
+(contaminação leve do a29 registrada: a29 testou UM método, não uma varredura,
+então não infla a seleção do a34). Alternativa a decidir com o dono: reservar
+uma fatia nunca vista. Registrado aqui antes de rodar.
+
 ## 2026-07-10 — a30: volume e momentum da preponderante (fecha a bateria)
 
 Sinais M5 cumulativos no dia (sem lookahead): volume = tick-volume normalizado
