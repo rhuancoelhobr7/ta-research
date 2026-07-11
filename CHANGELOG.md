@@ -5,6 +5,182 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — a35-bis: persistência-de-preço direcional CONFIRMA OOS (com caveat)
+
+Confirmação do 2º sinal promissor do a36 (a confirmação de preço sozinha: sinal
+do Δíndice de C em T0+k sustenta até o fim). Regra com ZERO parâmetros livres
+(k=4h, fim=15h fixos do a17) — o holdout formal já foi consumido no a35, então
+confirma-se robustez + estabilidade + cauda recente [q70,fim).
+
+- **Robusto e estável OOS**: research 0.640 → cauda 0.646 (IC [0.622,0.668]
+  exclui 0.5, edge 104%); estável nos 4 blocos (0.63-0.65, todos IC>0.5);
+  monotônico no k (2h 0.575 < 3h 0.619 < 4h 0.642).
+- **CAVEAT de magnitude (importante)**: residual direcional após 4h = **+0.02**
+  do move típico do dia — por 4h quase todo o movimento LÍQUIDO já foi. O sinal
+  SUSTENTA (a moeda raramente inverte, ~65%) mas sobra pouco a capturar entrando
+  às 4h.
+- **Leitura honesta**: é sinal de CONFIRMAÇÃO/MANUTENÇÃO de direção (não reverte),
+  NÃO edge de entrada tardia. Útil para segurar posição já aberta, não para abrir
+  às 4h. Coerente: o sinal está no preço, mas chega quando o grosso já passou.
+
+## 2026-07-11 — a37: a26b com controle vol-pareado — incremento SOME (CSS descritivo)
+
+Fecha o caveat do a26b. Cada evento de alinhamento pareado a um controle
+NÃO-alinhado com volatilidade PRÉVIA semelhante (decil de range das barras
+anteriores, por par).
+
+- Alinhamento ocorre em regime MUITO mais volátil: vol prévia **47 vs 27** do
+  controle bruto — o pareamento importa.
+- MFE: alinhado 16.8 | controle bruto 11.5 (**1.46×**, o a26b) | controle
+  **PAREADO por vol 15.6 (1.08×)**.
+- **O incremento do CSS SOME após parear** (1.46×→1.08×). O "1.45×" do a26b era
+  CLUSTERING DE VOLATILIDADE, não valor do CSS.
+
+**Veredito**: o badge de "confirmação concorrente" CAI. O CSS/CSSM é **APENAS
+DESCRITIVO** — sem valor incremental preditivo (a24/a29/a30/a34) NEM concorrente
+(a37). Atualizados INDICATOR_CHANGELOG e a proposta de badge. Fecha a bateria
+a33-a37 e o arco de pesquisa do CSS.
+
+## 2026-07-11 — a36: direção calendário×preço — combinação NULA, preço sozinho vive
+
+Combina a18 (notícia HIGH) e a17 (confirmação de preço em T0+k). Calendário
+2024-07→2026-07, 824 obs-evento por par (k,fim). Exploratório, não toca holdout.
+
+- **Combinação calendário×preço: NULA.** combinado 0.572 (k=2h) / 0.618 (k=4h)
+  NÃO supera só-preço 0.575 / 0.642 (no 4h é pior). Só-calendário (evento +
+  persistência) e persistência ficam ~0.50 (acaso). Surpresa não ajuda (0.57/0.59).
+  → O calendário NÃO agrega sobre a confirmação de preço.
+- **Mas a confirmação de PREÇO sozinha é sinal real**: a direção de T0+4h sustenta
+  até 15h em **0.642** (bem acima de 0.50) — a17 reconfirmado independentemente.
+  A rota viva de direção é o PREÇO (momentum intradiário persiste), não o
+  calendário.
+
+Coerente com todo o projeto: o sinal está no preço. (Se a persistência de preço
+virar produto direcional, exige a35-bis próprio.)
+
+## 2026-07-11 — a35: HOLDOUT — z-score@180 CONFIRMA (1º preditor OOS do projeto)
+
+Confirmação única no holdout PRISTINO [q50,q70) do M5 (154 dias, 2025-06 →
+2025-12), células pré-declaradas do a34, regra congelada, z-score com stats do
+research. **HOLDOUT [q50,q70) CONSUMIDO — irreversível, não se repete.**
+
+- **top-1 z-score@180: CONFIRMA.** holdout accB = **0.506** (research 0.508),
+  IC95 bootstrap [0.422, 0.591] (exclui o acaso 0.375), edge mantido **99%**.
+- css@180 e cssm@180: **FALHAM** (holdout 0.433/0.439, IC inclui 0.375; edge
+  mantido só 52%/59%). O z-score é genuinamente mais robusto que o CSS/momentum
+  bruto — normalizar cada moeda pela PRÓPRIA volatilidade histórica é o que
+  agrega, e sobrevive OOS.
+
+**Primeiro preditor confirmado out-of-sample do projeto.** Escopo honesto: é
+régua B (top-3 de moedas, NÃO a líder exata — régua A segue fraca ~0.24),
+latência 180 min (3h no dia), edge modesto (0.506 vs 0.375 = ~1.35× o acaso).
+E NÃO conserta a cadeia-par do a33: detecta "quais 3 moedas estão fortes às 3h",
+não "qual par tem o maior range" (líder×anti raramente é o maior-range global).
+Serve à DIREÇÃO (top-3 de moedas), não à seleção de par por amplitude.
+
+Estado do holdout: consumida a fatia [q50,q70). O trecho final [q70,fim) NÃO é
+pristino (a29/a30 tocaram). Research <q50 intacto para estudos futuros.
+
+## 2026-07-11 — a34: varredura de métricas (EXPLORATÓRIO) — candidatos marginais
+
+Grade pré-registrada: 70 células (8 famílias; família 7 range/vol em 2 variantes;
+famílias de retorno 1-6/8 têm variante única pois o índice sintético = média dos
+retornos orientados dos 7 pares por construção) × 7 janelas × régua B. Research =
+393 dias (<q50); holdout [q50,q70) INTOCADO. BH + reality check por permutação
+(200 perms, máximo entre células) + controle.
+
+- **Reality check p95 = 0.461**; **13 células sobrevivem** (BH + reality), TODAS
+  em janelas LONGAS (90/120/180 min) — nada precoce passa (confirma a29/a33: sem
+  detecção precoce).
+- **Top-1: z-score@180min = 0.508** (régua B top-3). Cluster @180: css 0.487,
+  cssm 0.485, momentum/rank/disp/ER 0.482 — TODAS coladas. **CSS/CSSM
+  indistinguíveis das métricas de preço** → o controle confirma o a30 de forma
+  independente (o CSS é transformação do preço).
+- Régua A (líder exata) fraca em tudo (~0.24 máx). Edge do candidato é pequeno
+  (0.508 vs 0.461 do reality check = +0.047).
+- Caveat: o z-score usa média/desvio do research (levemente in-sample) — pode
+  inflar marginalmente vs momentum/css (0.482-0.487); o a35 no holdout, com a
+  regra congelada, decide.
+
+**Candidato para o a35 (top-1 e top-3, declarados ANTES de rodar o holdout):**
+top-1 = **z-score@180min**; top-3 = {z-score@180, css@180, cssm@180}. Nenhuma
+conclusão do a34 isolado — só vira achado se sobreviver ao a35.
+
+## 2026-07-11 — a33: cadeia composta — NÃO SE SUSTENTA (negativo pré-registrado)
+
+Cadeia ponta a ponta (momentum T0+90min → líder×anti → par), 631 dias de
+research (holdout intocado), spread real por par. **Resultado sem suavização:**
+
+- **P(par candidato = par de maior range do dia) = 4.1%** — colado no acaso
+  (1/28 = 3.6%) e MUITO abaixo do baseline "maior ATR de sessão" (a25) = **29.8%**
+  (persistência 23.8%). A cadeia NÃO bate nenhum baseline.
+- **Excesso de ATR do candidato = −0.08** (abaixo da média dos 28!) vs +0.67 do
+  a31 conhecendo a líder. Range mediano do candidato 72.7 pips vs 143 do baseline
+  ATR — captura METADE.
+- **Decomposição do colapso**: (i) a líder estimada = verdadeira em só 15.7%
+  (a29 régua A); (ii) MESMO com a líder correta, líder×anti é o maior-range em
+  só 10.1% — o "55%" do a31 era campeão DENTRO dos 7 pares da líder, NÃO o
+  maior-range entre os 28. As duas peças não compõem.
+- Custo: spread desprezível (~0.3 pip; range 178× spread) — o critério de custo
+  passa, mas P(=max) reprova.
+
+**Veredito pré-registrado: a cadeia NÃO se sustenta.** As peças positivas
+isoladas (a29 top-3, a31 par) não formam sistema quando compostas com a detecção
+real; o ATR de sessão (a25) sozinho domina. Responde a pergunta central da
+bateria: para MOVIMENTO/amplitude, não há sistema além do ATR de sessão. (a34
+ainda testa se OUTRA métrica detecta a moeda melhor que o momentum — mas o teto
+é limitado pelo achado (ii): líder×anti raramente é o maior-range global.)
+
+## 2026-07-10 — MUDANÇA DE OBJETIVO + pré-registro da bateria a33-a37
+
+**Mudança de objetivo do projeto** (decisão do dono): não se busca mais
+engenharia reversa do especialista. O objetivo agora é **acertar as moedas/pares
+de grande movimento DIRECIONAL**, usando os achados positivos (range tem
+memória — a23/a32; top-3 aos 90 min — a29; par = líder×anti-líder — a31; ATR de
+sessão — a25; calendário — a18) e evitando o nulo (CSS como preditor — a30 mostrou
+que é transformação do preço). Motivação: os positivos foram validados
+ISOLADAMENTE; a cadeia composta nunca foi medida ponta a ponta, e o a31 (55%)
+pressupõe conhecer a líder — que o a29 diz NÃO se conhecer (top-3 a 48%).
+
+**PRÉ-REGISTRO (escrito ANTES de qualquer resultado; código congelado por
+estudo, `pytest` verde a cada commit):**
+
+- **a33 — cadeia composta ponta a ponta, líquida de custo (CONFIRMATÓRIO).** Uma
+  execução, sem grade. Pipeline causal: T0+90min top-3 por momentum (código do
+  a29) → líder/anti do top-3 ESTIMADO → par = líder×anti (a31) → ATR de sessão
+  (a25). Métricas: P(par candidato = par de maior range do dia) vs 14% (a31) e
+  1/28; ATR extra vs demais; decomposição condicional a acertar a líder; LÍQUIDO
+  de custo (spread real por par, mediana do M5). Baselines: aleatório; maior ATR
+  de sessão; persistência (maior range de ontem). **Veredito pré-registrado**:
+  a cadeia "se sustenta" se bater TODOS os baselines E o range líquido > 2× o
+  spread mediano; senão, NÃO se sustenta.
+- **a34 — varredura de métricas (EXPLORATÓRIO).** Grade pré-registrada: 8
+  famílias (momentum, ret/ATR, EffRatio, z-score, rank cross-sec, dispersão,
+  range/vol, CSS/CSSM-controle) × 2 variantes (índice sintético / média dos 7
+  pares) × 7 janelas (5,15,30,60,90,120,180min) × 2 alvos (líder / top-3). BH
+  sobre a família INTEIRA + reality check por permutação + controle negativo +
+  70/30. **HOLDOUT INTOCADO.** Saída = candidato, não achado.
+- **a35 — confirmação no HOLDOUT (uma vez só).** Top-1 (e no máx top-3) células
+  do a34, sem re-otimizar. Critério: top-3 > acaso (0.375) com IC95 excluindo o
+  acaso, e não perder >25% do edge do research. Consome o holdout
+  (irreversível).
+- **a36 — direção: calendário (a18) × confirmação de preço (a17).** Evento HIGH
+  de C E preço confirmando em T0+k (2h,4h) → direção sustenta até 12h/15h. Só
+  vale se bater as DUAS peças isoladas + persistência + acaso. Calendário
+  disponível (2024-07+, com actual/forecast → surpresa). Holdout intocado.
+- **a37 — fechar o caveat do a26b: controle PAREADO por volatilidade.** Refazer
+  o a26b amostrando controles com vol realizada semelhante (matching por quantil
+  de ATR). Se o incremento do CSS sumir, o badge de "confirmação concorrente"
+  cai e o CSS fica APENAS descritivo.
+
+**CAVEAT DE HOLDOUT (a resolver antes do a35):** o holdout de `splits_days.py` é
+os últimos 20% dos dias. Mas a29/a30 avaliaram no último 30% (split 70/30),
+que SOBREPÕE esse holdout — logo o holdout de 20% NÃO está pristino para o a35.
+a34 usará SÓ os primeiros 80% (research) e o a35 confirmará nos últimos 20%
+(contaminação leve do a29 registrada: a29 testou UM método, não uma varredura,
+então não infla a seleção do a34). Alternativa a decidir com o dono: reservar
+uma fatia nunca vista. Registrado aqui antes de rodar.
+
 ## 2026-07-10 — a30: volume e momentum da preponderante (fecha a bateria)
 
 Sinais M5 cumulativos no dia (sem lookahead): volume = tick-volume normalizado
