@@ -1,0 +1,4 @@
+celula,accB_holdout,ic_lo,ic_hi,accB_research,edge_mantido,confirma,n
+z-score@180,0.5065,0.4221,0.5911,0.508,0.9887,True,154
+css@180,0.4331,0.3503,0.5159,0.487,0.5189,False,157
+cssm@180,0.4395,0.3567,0.5225,0.485,0.5863,False,157

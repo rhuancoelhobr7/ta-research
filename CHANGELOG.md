@@ -5,6 +5,29 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — a35: HOLDOUT — z-score@180 CONFIRMA (1º preditor OOS do projeto)
+
+Confirmação única no holdout PRISTINO [q50,q70) do M5 (154 dias, 2025-06 →
+2025-12), células pré-declaradas do a34, regra congelada, z-score com stats do
+research. **HOLDOUT [q50,q70) CONSUMIDO — irreversível, não se repete.**
+
+- **top-1 z-score@180: CONFIRMA.** holdout accB = **0.506** (research 0.508),
+  IC95 bootstrap [0.422, 0.591] (exclui o acaso 0.375), edge mantido **99%**.
+- css@180 e cssm@180: **FALHAM** (holdout 0.433/0.439, IC inclui 0.375; edge
+  mantido só 52%/59%). O z-score é genuinamente mais robusto que o CSS/momentum
+  bruto — normalizar cada moeda pela PRÓPRIA volatilidade histórica é o que
+  agrega, e sobrevive OOS.
+
+**Primeiro preditor confirmado out-of-sample do projeto.** Escopo honesto: é
+régua B (top-3 de moedas, NÃO a líder exata — régua A segue fraca ~0.24),
+latência 180 min (3h no dia), edge modesto (0.506 vs 0.375 = ~1.35× o acaso).
+E NÃO conserta a cadeia-par do a33: detecta "quais 3 moedas estão fortes às 3h",
+não "qual par tem o maior range" (líder×anti raramente é o maior-range global).
+Serve à DIREÇÃO (top-3 de moedas), não à seleção de par por amplitude.
+
+Estado do holdout: consumida a fatia [q50,q70). O trecho final [q70,fim) NÃO é
+pristino (a29/a30 tocaram). Research <q50 intacto para estudos futuros.
+
 ## 2026-07-11 — a34: varredura de métricas (EXPLORATÓRIO) — candidatos marginais
 
 Grade pré-registrada: 70 células (8 famílias; família 7 range/vol em 2 variantes;
