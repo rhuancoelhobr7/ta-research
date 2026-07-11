@@ -5,6 +5,26 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — a39: scaffold de validação PROSPECTIVA (a única rota honesta)
+
+Como o holdout está esgotado e o a38 fechou os dois sinais como inúteis no
+retrospecto, a única forma legítima de testar qualquer coisa daqui em diante é
+PROSPECTIVA: registrar as previsões das regras CONGELADAS ANTES do desfecho e
+pontuar depois, acumulando amostra genuinamente OOS com o tempo.
+
+- **`a39_prospective.py`** (`--freeze/--record/--score/--report`): regras
+  idênticas ao a35/a35-bis/a38 (zero parâmetros livres); só processa dias
+  ESTRITAMENTE após `freeze_date` (2026-07-10). Integridade append-only:
+  `predictions.csv` (escrita antes do desfecho) e `outcomes.csv` (após a janela de
+  15h), nunca reescritas — história tamper-evident no git.
+- **`data/prospective/frozen_params.json`** (versionado): média/desvio do z-score
+  do research congelados. **Não reeditar.**
+- Estado: com os dados atuais terminando no freeze, `--record` loga 0 (trava
+  correta). O scaffold acumula conforme o dono exportar dias novos.
+- Protocolo em `data/prospective/README.md`. Critério pré-registrado: confirma o
+  a38 se acurácia ~50% e expectativa líquida não-positiva; nenhuma regra é
+  ajustada aqui.
+
 ## 2026-07-11 — a38: valor ECONÔMICO — NENHUM sinal é operável (acurácia ≠ lucro)
 
 Teste de CUSTO sobre as duas regras JÁ CONGELADAS (a35 z-score@180; a35-bis
