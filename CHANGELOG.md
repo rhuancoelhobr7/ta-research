@@ -5,6 +5,27 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-12 — a41: o MAPA entrada×saída×sessão — NULO (com 1 hipótese p/ a39)
+
+Execução do pré-registro (EXPLORATÓRIO, holdout esgotado). 215 células válidas
+(âncoras Tóquio/Londres/NY × entradas fixas+condicionais × saídas incl. início/
+FIM do overlap × cesta). Métrica primária: PnL líquido do CAPTURÁVEL (entrada->
+saída, trava do a38 testada). BH + reality check por permutação (p95=+2.32 pips).
+
+- **F1 (mapa): NULO. NENHUMA célula sobrevive** (exp>0, IC exclui 0, BH, reality
+  check). O "menos-ruim" é **Tóquio +120min → overlap** (exp ~+0.37 pips, IC
+  [-0.57,+1.29], acc do capturável ~0.506 = moeda-ao-ar). A célula "que ninguém
+  testou" (fim do overlap) também é nula. → não há ponto entrada×saída×sessão
+  onde a direção seja conhecível E sobre movimento p/ pagar o custo. Confirma o
+  aperto do a38 em TODO o espaço.
+- **F2 (exploratório sobre exploratório, poder reduzido)**: estratificando a
+  melhor célula por volatilidade prévia, o quartil MAIS volátil dá **+3.26 pips**
+  (calmos negativos). É a ÚNICA pista do a41 — uma HIPÓTESE (célula post-hoc, sem
+  BH interno), coerente com a memória de volatilidade (a23/a32).
+- **Consequência**: como nenhuma célula F1 sobrevive, NADA é congelado como regra
+  confirmada no a39. A hipótese do F2 (Tóquio-tarde→overlap em dias de alta vol)
+  fica registrada como CANDIDATO para observação prospectiva — jamais achado.
+
 ## 2026-07-12 — NOVO ENQUADRAMENTO + a40 (justificativa) + a41 (pré-registro)
 
 **Mudança de enquadramento** (decisão do dono): o projeto não busca mais replicar
