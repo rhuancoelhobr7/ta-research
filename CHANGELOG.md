@@ -5,6 +5,32 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-12 — a42: PRÉ-REGISTRO — o a25 tem informação diária ou é uma tabela?
+
+Observação que motiva: o a25 (único produto sobrevivente) reporta 84% de
+sobreposição dia a dia — escolhe quase sempre os mesmos pares (provável: crosses
+de GBP, estruturalmente grandes). Se for isso, o "1.81× o acaso" pode não ser
+previsão nenhuma, só o fato trivial de que libra anda mais que EURCHF — uma
+TABELA, não um modelo. **Este estudo PODE MATAR o a25; se matar, reportar sem
+suavizar.** EXPLORATÓRIO (holdout esgotado): qualquer vencedor é CANDIDATO,
+confirmável só via prospectivo (a39).
+
+**Pré-registro (congelado ANTES dos resultados).** 3 competidores p/ prever o par
+de maior range / capturar amplitude, todos derivados do base_atr do a25
+(importado, sem editar), causais:
+- **E (estático)**: média histórica de longo prazo do ATR (expanding do base_atr,
+  shift — só dias anteriores). Zero informação do dia.
+- **A (a25)**: base_atr (nível de 20 dias), importado como está.
+- **Z (z-ATR)**: (base_atr − média_hist) / desvio_hist, janelas {60,120,250} dias
+  (rolling causal). Isola o componente do DIA (remove o nível). 3 células, BH.
+
+Q1 A vs E (o a25 tem informação diária? IC da diferença); Q2 Z vs E (o z-ATR
+tem?); Q3 razão de eficiência range/spread (métrica primária, costs.py) — E/A/Z/
+aleatório; Q4 composição (quais pares o a25 escolhe; sobreposição de Z vs A).
+Travas: BH sobre a família (Q1-Q3 + 3 janelas), reality check, controle negativo,
+bootstrap em blocos, sem lookahead (stats só de dias anteriores), 70/30 só p/
+estabilidade.
+
 ## 2026-07-11 — a39: scaffold de validação PROSPECTIVA (a única rota honesta)
 
 Como o holdout está esgotado e o a38 fechou os dois sinais como inúteis no
