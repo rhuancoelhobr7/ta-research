@@ -157,6 +157,19 @@ def main():
         + ", ".join(f"{k} {v:.0%}" for k, v in overl.items()),
         f"\n- sobreposição Z120 vs A (mesmo top-1): {ov_ZA:.0%} "
         f"({'Z carrega info do DIA (troca mais)' if ov_ZA < 0.5 else 'Z parecido com A'}).\n",
+        "\n## Síntese\n",
+        f"**O a25 SOBREVIVE**: tem informação diária real (+{fam.loc[fam.comp=='A','dif_vs_E_pips'].iloc[0]:.1f} "
+        f"pips vs estático, IC exclui 0, BH), mas é SOBRETUDO uma tabela (escolhe "
+        f"GBP-crosses ~86%, 84% de sobreposição). **O z-ATR FALHA para AMPLITUDE "
+        f"absoluta** (~-28 pips vs estático): para amplitude, o NÍVEL É o sinal, e "
+        f"auto-normalizar (remover o nível) o destrói — o OPOSTO da direção (a35, "
+        f"onde a auto-normalização venceu). Dicotomia limpa: **amplitude mora no "
+        f"NÍVEL, direção morava no DESVIO.** PORÉM o **z-ATR VENCE em eficiência "
+        f"range/spread** ({q3.loc[best_eff,'efic_range/spread']:.0f} vs "
+        f"{q3.loc['A','efic_range/spread']:.0f} do a25), selecionando pares calmos "
+        f"num dia atípico com spread proporcionalmente menor — o cenário do a40. "
+        f"CANDIDATO para o prospectivo (a39): z-ATR como seletor spread-eficiente; "
+        f"jamais achado confirmado (holdout esgotado).\n",
     ]
     (out / "REPORT.md").write_text("\n".join(rep), encoding="utf-8")
     print(f"a42: {out}/REPORT.md ({time.time()-t0:.1f}s)")

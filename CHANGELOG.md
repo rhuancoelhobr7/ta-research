@@ -5,6 +5,34 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-12 — a42: o a25 SOBREVIVE (tem info diária) + dicotomia nível/desvio
+
+Execução do pré-registro. Competidores E (estático) / A (a25) / Z (z-ATR) do
+base_atr, alvo = par de maior range, ~2585 dias.
+
+- **Q1 (A vs E): o a25 TEM informação diária real** — captura +3.69 pips/dia
+  acima do estático (IC [+2.08, +5.46], BH-signif.). **O a25 NÃO é morto** — não
+  é só uma tabela. MAS é sobretudo tabela: escolhe GBP-crosses ~86% (GBPNZD 51%,
+  GBPJPY 23%, GBPAUD 12%), 84% de sobreposição dia a dia. A confirmação da
+  suspeita (crosses de GBP) é total; o edge diário existe mas é pequeno.
+- **Q2 (Z vs E): o z-ATR FALHA para amplitude absoluta** — captura ~28 pips A
+  MENOS que o estático (IC muito negativo). Para AMPLITUDE o NÍVEL é o sinal;
+  auto-normalizar (remover o nível) o destrói. **OPOSTO da direção (a35)**, onde a
+  auto-normalização venceu e o cross-sectional falhou. Dicotomia limpa e nova do
+  projeto: **amplitude mora no NÍVEL; direção morava no DESVIO.**
+- **Q3 (eficiência range/spread, primária): o z-ATR VENCE** — 160 (Z250) vs 135
+  (a25) vs 97 (estático) vs 132 (aleatório). O z-ATR seleciona pares normalmente
+  calmos num dia atípico, com spread proporcionalmente MENOR — exatamente o
+  cenário que o a40 antecipou (o ATR bruto pega pares de spread grande). Trade-off:
+  z-ATR dá mais movimento POR SPREAD, mas menos pips absolutos (49 vs 80).
+- **Q4**: sobreposição Z120 vs A = 6% (Z troca quase tudo → info do DIA, não do
+  nível).
+
+**Veredito**: o a25 sobrevive com informação diária pequena porém real; o produto
+segue de pé. O z-ATR não substitui o a25 em amplitude bruta, mas é CANDIDATO
+(prospectivo/a39) como seletor spread-eficiente. Nada congelado (exploratório,
+holdout esgotado).
+
 ## 2026-07-12 — a42: PRÉ-REGISTRO — o a25 tem informação diária ou é uma tabela?
 
 Observação que motiva: o a25 (único produto sobrevivente) reporta 84% de
