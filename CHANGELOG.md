@@ -5,6 +5,25 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-12 — a43: o a25 EMPACOTADO como produto de amplitude (o entregável)
+
+Decisão do dono: empacotar o único sobrevivente. `a43_produto.py` + `PRODUTO_a25.md`
+(card). Reusa a25 (via a42) e costs.py; sem parâmetros livres. Dois modos validados:
+- **AMPLITUDE** (a25/ATR): **79.3 pips líq/dia**, 80% do teto, acerta o par de maior
+  range em 30% (vs 3.6% do acaso). Bate o estático (75.3) e o aleatório (45).
+- **EFICIÊNCIA** (z-ATR do a42): menos pips (49) mas **razão range/spread 160 vs
+  135** — mais movimento por custo, p/ operador sensível a spread.
+
+Artefato operável: `pick_hoje_*.csv` (ranking do dia; ex. 2026-07-09: GBPJPY 107p
+folga 178, GBPNZD 103, CHFJPY 100). Roda diário após ingerir M5.
+
+HONESTIDADE (no card e no REPORT, dura): seleciona AMPLITUDE, **NÃO direção nem
+lucro**. A "amplitude líquida" é o TETO capturável se a direção acertar — por
+construção sempre >0, então NÃO tem drawdown (métricas de risco removidas de
+propósito: risco/DD só existem quando a direção entra, que o a25 não fornece).
+Direção e gestão são do trader; registrar prospectivamente (a39). Não usa CSS
+(preço reembalado) nem prevê T0.
+
 ## 2026-07-12 — a42: o a25 SOBREVIVE (tem info diária) + dicotomia nível/desvio
 
 Execução do pré-registro. Competidores E (estático) / A (a25) / Z (z-ATR) do
