@@ -5,6 +5,22 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-11 — Dados novos: posts do especialista jun–jul/2026 (`data/specialist/`)
+
+Lote novo fornecido pelo usuário (via repositório IFM-V2): 13 cestas postadas
+(2026-06-15..2026-07-10) + 77 trades transcritos dos prints. Decisões:
+
+- **`specialist_calls.csv` INTOCADO** (regra dura nº 4 — imutável). O lote novo
+  entra como `data/specialist/` com README de caveats; observações comuns,
+  sem peso especial.
+- **Discrepância registrada, não resolvida**: a âncora tem 2026-07-03 NZD ALTA;
+  o lote novo lista 07-03 entre os 7 dias úteis SEM post capturado. Aguardando
+  esclarecimento do dono (prints faltantes vs. dias sem post).
+- Sanidade da transcrição reproduzida: 10/11 cestas com soma dos trades == total
+  do print (diff 0.00); 2026-07-02 diverge +966.06 e é multi-dia — usar com cautela.
+- Proveniência fraca (prints promocionais, conta não verificável): serve para
+  auditoria de escolha+direção+data; NÃO serve para inferência de retorno.
+
 ## 2026-07-11 — a39: scaffold de validação PROSPECTIVA (a única rota honesta)
 
 Como o holdout está esgotado e o a38 fechou os dois sinais como inúteis no

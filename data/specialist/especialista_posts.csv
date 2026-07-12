@@ -1,0 +1,14 @@
+date,currency,direction,close_time_server,days_held,n_trades,total_profit,source_note
+2026-06-15,CHF,ALTA,10:48,1,7,94508.86,img1
+2026-06-16,EUR,ALTA,10:55,1,7,57841.49,img2
+2026-06-17,NZD,BAIXA,10:50,1,7,90956.38,img3
+2026-06-18,GBP,BAIXA,10:56,1,7,163049.79,img4 (=img5 duplicata)
+2026-06-19,NZD,BAIXA,10:48,1,7,94908.40,img6 (=img9 duplicata; legenda: continuacao da fraqueza do NZD)
+2026-06-22,GBP,ALTA,10:42,1,7,142876.42,img7
+2026-06-25,EUR,BAIXA,11:43,1,7,31440.39,img8
+2026-06-29,JPY,BAIXA,10:51,1,7,63388.85,img10
+2026-06-30,NZD,ALTA,10:43,1,7,80214.46,img11
+2026-07-02,GBP,ALTA,03:14,2,7,184036.10,img12 (portfolio de 2 dias; entrada estimada 06-30/07-01)
+2026-07-06,JPY,BAIXA,10:41,1,7,162281.76,img13
+2026-07-07,JPY,ALTA,11:00,1,7,75840.10,img14
+2026-07-10,JPY,ALTA,10:40,1,7,139752.64,img15
