@@ -5,6 +5,70 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
+## 2026-07-12 — a41: o MAPA entrada×saída×sessão — NULO (com 1 hipótese p/ a39)
+
+Execução do pré-registro (EXPLORATÓRIO, holdout esgotado). 215 células válidas
+(âncoras Tóquio/Londres/NY × entradas fixas+condicionais × saídas incl. início/
+FIM do overlap × cesta). Métrica primária: PnL líquido do CAPTURÁVEL (entrada->
+saída, trava do a38 testada). BH + reality check por permutação (p95=+2.32 pips).
+
+- **F1 (mapa): NULO. NENHUMA célula sobrevive** (exp>0, IC exclui 0, BH, reality
+  check). O "menos-ruim" é **Tóquio +120min → overlap** (exp ~+0.37 pips, IC
+  [-0.57,+1.29], acc do capturável ~0.506 = moeda-ao-ar). A célula "que ninguém
+  testou" (fim do overlap) também é nula. → não há ponto entrada×saída×sessão
+  onde a direção seja conhecível E sobre movimento p/ pagar o custo. Confirma o
+  aperto do a38 em TODO o espaço.
+- **F2 (exploratório sobre exploratório, poder reduzido)**: estratificando a
+  melhor célula por volatilidade prévia, o quartil MAIS volátil dá **+3.26 pips**
+  (calmos negativos). É a ÚNICA pista do a41 — uma HIPÓTESE (célula post-hoc, sem
+  BH interno), coerente com a memória de volatilidade (a23/a32).
+- **Consequência**: como nenhuma célula F1 sobrevive, NADA é congelado como regra
+  confirmada no a39. A hipótese do F2 (Tóquio-tarde→overlap em dias de alta vol)
+  fica registrada como CANDIDATO para observação prospectiva — jamais achado.
+
+## 2026-07-12 — NOVO ENQUADRAMENTO + a40 (justificativa) + a41 (pré-registro)
+
+**Mudança de enquadramento** (decisão do dono): o projeto não busca mais replicar
+o método de nenhum operador nem "achar o indicador certo". Usa-se os POSITIVOS
+para navegar (volatilidade tem memória a23/a32; direção não existe cedo mas passa
+a existir a29; overlap concentra ~49% do range a22/a32; ER explica os ~88% a3;
+ranqueador ATR a25 é o único produto sobrevivente) e os NEGATIVOS como mapa do
+que evitar (não prever direção em T0; CSS é preço reembalado a30/a34/a37; **nunca
+medir acurácia sobre movimento JÁ ocorrido, só sobre o CAPTURÁVEL** — a lição
+mais cara, do a38; não segurar até 12/15h; não compor sem medir a33).
+
+**a40 — justificativa**: teste de CUSTO sobre o ranqueador ATR (a25), regra JÁ
+validada em estudos independentes de volatilidade (a23/a32/a33). Zero parâmetros
+livres (importa o ranking do a25 sem modificar; reusa `costs.py` do a38). Aplicar
+custo determinístico a regra congelada sobre o dataset completo NÃO é data
+snooping — nenhum grau de liberdade ajustado contra os dados.
+
+**a41 — PRÉ-REGISTRO (escrito ANTES dos resultados). EXPLORATÓRIO por construção:
+o HOLDOUT ESTÁ ESGOTADO (a35/a35-bis) — nenhuma célula sobrevivente é achado
+confirmado, só CANDIDATO; a confirmação só pode vir do prospectivo (a39), nunca
+de novo backtest.** Prior honesto: 10 formulações direcionais já morreram; a
+expectativa a priori é nula; o valor do a41 é o MAPA (mapa nulo também é
+entregável — delimita onde não há nada).
+- **F1 (primária)** — mapa entrada×saída×sessão, rank-agnóstico. Âncoras: Tóquio/
+  Londres/NY (defs do a22/a32). Entradas: fixas {+30,+60,+90,+120,+180,+240} +
+  condicionais (1ª barra M5 que dispara, espera máx 240min): ER>={0.4,0.6},
+  |z|>={1.0,1.5}; direção=sinal do mov acumulado até a entrada. Saídas: +1h/+2h/
+  +4h da entrada, fim da sessão, INÍCIO e FIM do overlap Londres/NY, 12h/15h de
+  T0 (saída > entrada, >=30min). Universo: 8 moedas (índice), direção POR moeda.
+  Trade: par-único (moeda-gatilho × oposta mais forte) e cesta (7 pares).
+  Métrica PRIMÁRIA: PnL líquido do CAPTURÁVEL (entrada->saída) via costs.py — NÃO
+  acurácia. Também: acurácia do capturável, magnitude residual, frequência
+  (n<100 insuf.), expectativa líq. + IC95, PF, DD. Baselines: aleatório,
+  invertido, buy&hold — célula "vive" só se bater os 3 + BH + reality check. 70/30
+  só p/ estabilidade (NÃO confirmação). Entregável: o MAPA (heatmap entrada×saída
+  por âncora).
+- **F2 (secundária)** — condições, corrigidas SEPARADAMENTE (BH próprio, poder
+  reduzido: "exploratório sobre exploratório — hipóteses, não resultados").
+  Estratifica F1 por: volatilidade prévia (quartis), ER do dia (quartis),
+  dispersão cross-sectional.
+- Toda célula sobrevivente vira `frozen_params` novo no a39 (não reeditar os
+  existentes de a35/a35-bis/a38).
+
 ## 2026-07-11 — a39: scaffold de validação PROSPECTIVA (a única rota honesta)
 
 Como o holdout está esgotado e o a38 fechou os dois sinais como inúteis no
