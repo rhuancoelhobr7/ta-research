@@ -5,69 +5,59 @@ conta. Toda IA (ou humano) trabalhando neste repositório deve ler isto antes
 de propor mudanças: várias escolhas abaixo são IRREVERSÍVEIS por regra
 (CLAUDE.md, "Regras duras").
 
-## 2026-07-12 — a41: o MAPA entrada×saída×sessão — NULO (com 1 hipótese p/ a39)
+## 2026-07-12 — a42: o a25 SOBREVIVE (tem info diária) + dicotomia nível/desvio
 
-Execução do pré-registro (EXPLORATÓRIO, holdout esgotado). 215 células válidas
-(âncoras Tóquio/Londres/NY × entradas fixas+condicionais × saídas incl. início/
-FIM do overlap × cesta). Métrica primária: PnL líquido do CAPTURÁVEL (entrada->
-saída, trava do a38 testada). BH + reality check por permutação (p95=+2.32 pips).
+Execução do pré-registro. Competidores E (estático) / A (a25) / Z (z-ATR) do
+base_atr, alvo = par de maior range, ~2585 dias.
 
-- **F1 (mapa): NULO. NENHUMA célula sobrevive** (exp>0, IC exclui 0, BH, reality
-  check). O "menos-ruim" é **Tóquio +120min → overlap** (exp ~+0.37 pips, IC
-  [-0.57,+1.29], acc do capturável ~0.506 = moeda-ao-ar). A célula "que ninguém
-  testou" (fim do overlap) também é nula. → não há ponto entrada×saída×sessão
-  onde a direção seja conhecível E sobre movimento p/ pagar o custo. Confirma o
-  aperto do a38 em TODO o espaço.
-- **F2 (exploratório sobre exploratório, poder reduzido)**: estratificando a
-  melhor célula por volatilidade prévia, o quartil MAIS volátil dá **+3.26 pips**
-  (calmos negativos). É a ÚNICA pista do a41 — uma HIPÓTESE (célula post-hoc, sem
-  BH interno), coerente com a memória de volatilidade (a23/a32).
-- **Consequência**: como nenhuma célula F1 sobrevive, NADA é congelado como regra
-  confirmada no a39. A hipótese do F2 (Tóquio-tarde→overlap em dias de alta vol)
-  fica registrada como CANDIDATO para observação prospectiva — jamais achado.
+- **Q1 (A vs E): o a25 TEM informação diária real** — captura +3.69 pips/dia
+  acima do estático (IC [+2.08, +5.46], BH-signif.). **O a25 NÃO é morto** — não
+  é só uma tabela. MAS é sobretudo tabela: escolhe GBP-crosses ~86% (GBPNZD 51%,
+  GBPJPY 23%, GBPAUD 12%), 84% de sobreposição dia a dia. A confirmação da
+  suspeita (crosses de GBP) é total; o edge diário existe mas é pequeno.
+- **Q2 (Z vs E): o z-ATR FALHA para amplitude absoluta** — captura ~28 pips A
+  MENOS que o estático (IC muito negativo). Para AMPLITUDE o NÍVEL é o sinal;
+  auto-normalizar (remover o nível) o destrói. **OPOSTO da direção (a35)**, onde a
+  auto-normalização venceu e o cross-sectional falhou. Dicotomia limpa e nova do
+  projeto: **amplitude mora no NÍVEL; direção morava no DESVIO.**
+- **Q3 (eficiência range/spread, primária): o z-ATR VENCE** — 160 (Z250) vs 135
+  (a25) vs 97 (estático) vs 132 (aleatório). O z-ATR seleciona pares normalmente
+  calmos num dia atípico, com spread proporcionalmente MENOR — exatamente o
+  cenário que o a40 antecipou (o ATR bruto pega pares de spread grande). Trade-off:
+  z-ATR dá mais movimento POR SPREAD, mas menos pips absolutos (49 vs 80).
+- **Q4**: sobreposição Z120 vs A = 6% (Z troca quase tudo → info do DIA, não do
+  nível).
 
-## 2026-07-12 — NOVO ENQUADRAMENTO + a40 (justificativa) + a41 (pré-registro)
+**Veredito**: o a25 sobrevive com informação diária pequena porém real; o produto
+segue de pé. O z-ATR não substitui o a25 em amplitude bruta, mas é CANDIDATO
+(prospectivo/a39) como seletor spread-eficiente. Nada congelado (exploratório,
+holdout esgotado).
 
-**Mudança de enquadramento** (decisão do dono): o projeto não busca mais replicar
-o método de nenhum operador nem "achar o indicador certo". Usa-se os POSITIVOS
-para navegar (volatilidade tem memória a23/a32; direção não existe cedo mas passa
-a existir a29; overlap concentra ~49% do range a22/a32; ER explica os ~88% a3;
-ranqueador ATR a25 é o único produto sobrevivente) e os NEGATIVOS como mapa do
-que evitar (não prever direção em T0; CSS é preço reembalado a30/a34/a37; **nunca
-medir acurácia sobre movimento JÁ ocorrido, só sobre o CAPTURÁVEL** — a lição
-mais cara, do a38; não segurar até 12/15h; não compor sem medir a33).
+## 2026-07-12 — a42: PRÉ-REGISTRO — o a25 tem informação diária ou é uma tabela?
 
-**a40 — justificativa**: teste de CUSTO sobre o ranqueador ATR (a25), regra JÁ
-validada em estudos independentes de volatilidade (a23/a32/a33). Zero parâmetros
-livres (importa o ranking do a25 sem modificar; reusa `costs.py` do a38). Aplicar
-custo determinístico a regra congelada sobre o dataset completo NÃO é data
-snooping — nenhum grau de liberdade ajustado contra os dados.
+Observação que motiva: o a25 (único produto sobrevivente) reporta 84% de
+sobreposição dia a dia — escolhe quase sempre os mesmos pares (provável: crosses
+de GBP, estruturalmente grandes). Se for isso, o "1.81× o acaso" pode não ser
+previsão nenhuma, só o fato trivial de que libra anda mais que EURCHF — uma
+TABELA, não um modelo. **Este estudo PODE MATAR o a25; se matar, reportar sem
+suavizar.** EXPLORATÓRIO (holdout esgotado): qualquer vencedor é CANDIDATO,
+confirmável só via prospectivo (a39).
 
-**a41 — PRÉ-REGISTRO (escrito ANTES dos resultados). EXPLORATÓRIO por construção:
-o HOLDOUT ESTÁ ESGOTADO (a35/a35-bis) — nenhuma célula sobrevivente é achado
-confirmado, só CANDIDATO; a confirmação só pode vir do prospectivo (a39), nunca
-de novo backtest.** Prior honesto: 10 formulações direcionais já morreram; a
-expectativa a priori é nula; o valor do a41 é o MAPA (mapa nulo também é
-entregável — delimita onde não há nada).
-- **F1 (primária)** — mapa entrada×saída×sessão, rank-agnóstico. Âncoras: Tóquio/
-  Londres/NY (defs do a22/a32). Entradas: fixas {+30,+60,+90,+120,+180,+240} +
-  condicionais (1ª barra M5 que dispara, espera máx 240min): ER>={0.4,0.6},
-  |z|>={1.0,1.5}; direção=sinal do mov acumulado até a entrada. Saídas: +1h/+2h/
-  +4h da entrada, fim da sessão, INÍCIO e FIM do overlap Londres/NY, 12h/15h de
-  T0 (saída > entrada, >=30min). Universo: 8 moedas (índice), direção POR moeda.
-  Trade: par-único (moeda-gatilho × oposta mais forte) e cesta (7 pares).
-  Métrica PRIMÁRIA: PnL líquido do CAPTURÁVEL (entrada->saída) via costs.py — NÃO
-  acurácia. Também: acurácia do capturável, magnitude residual, frequência
-  (n<100 insuf.), expectativa líq. + IC95, PF, DD. Baselines: aleatório,
-  invertido, buy&hold — célula "vive" só se bater os 3 + BH + reality check. 70/30
-  só p/ estabilidade (NÃO confirmação). Entregável: o MAPA (heatmap entrada×saída
-  por âncora).
-- **F2 (secundária)** — condições, corrigidas SEPARADAMENTE (BH próprio, poder
-  reduzido: "exploratório sobre exploratório — hipóteses, não resultados").
-  Estratifica F1 por: volatilidade prévia (quartis), ER do dia (quartis),
-  dispersão cross-sectional.
-- Toda célula sobrevivente vira `frozen_params` novo no a39 (não reeditar os
-  existentes de a35/a35-bis/a38).
+**Pré-registro (congelado ANTES dos resultados).** 3 competidores p/ prever o par
+de maior range / capturar amplitude, todos derivados do base_atr do a25
+(importado, sem editar), causais:
+- **E (estático)**: média histórica de longo prazo do ATR (expanding do base_atr,
+  shift — só dias anteriores). Zero informação do dia.
+- **A (a25)**: base_atr (nível de 20 dias), importado como está.
+- **Z (z-ATR)**: (base_atr − média_hist) / desvio_hist, janelas {60,120,250} dias
+  (rolling causal). Isola o componente do DIA (remove o nível). 3 células, BH.
+
+Q1 A vs E (o a25 tem informação diária? IC da diferença); Q2 Z vs E (o z-ATR
+tem?); Q3 razão de eficiência range/spread (métrica primária, costs.py) — E/A/Z/
+aleatório; Q4 composição (quais pares o a25 escolhe; sobreposição de Z vs A).
+Travas: BH sobre a família (Q1-Q3 + 3 janelas), reality check, controle negativo,
+bootstrap em blocos, sem lookahead (stats só de dias anteriores), 70/30 só p/
+estabilidade.
 
 ## 2026-07-11 — a39: scaffold de validação PROSPECTIVA (a única rota honesta)
 
