@@ -59,6 +59,27 @@
 //|     sempre com a regua da propria janela.                        |
 //|   - WM_BARS = comportamento v1.40 EXATO (inputs legados valem).  |
 //|                                                                  |
+//|  v1.42 (coluna "er" no painel — SOMENTE EXIBIÇÃO):               |
+//|   - MOTIVACAO: o ER (eficiencia de caminho de Kaufman) ja era    |
+//|     calculado desde a v1.30 — o M depende dele — mas era o unico |
+//|     ingrediente do M que nao aparecia no painel. Pesquisa        |
+//|     detector-g8 (b1/b9/b10, jul-2026) mediu que o ER contínuo    |
+//|     ordena a captura restante ~2x melhor que o rotulo de 4       |
+//|     estados, e que |ER| >= 0.2528 confirma o zS melhor que o M.  |
+//|   - STATUS DA HIPOTESE: EXPLORATORIA. Congelada em pre-registro  |
+//|     prospectivo (P2, detector-g8/research/p2_er_prospectivo).    |
+//|     A coluna existe para OBSERVACAO, nao para operar.            |
+//|   - Por isso NAO ha marcador de ligado/desligado no limiar: o    |
+//|     painel ja teve uma regra que acendia como gatilho e detectou |
+//|     0% no teste selado do ifm-lab. Numero cru, sem destaque.     |
+//|   - COMO LER: o ER tem dois papeis. Como PORTAO (~0.25 com zS    |
+//|     ligado) marca o cruzamento que merece atencao. Como          |
+//|     GRADIENTE dentro do movimento, ER alto = POUCA captura       |
+//|     restante (b1: rho -0.51) — nao e "entre agora", e "ja andou".|
+//|   - ZERO alteracao de calculo, de buffer ou de gate. Somente     |
+//|     layout: uma coluna e o deslocamento da grade MTF.            |
+//|     InpShowER=false restaura o layout v1.41 EXATO.               |
+//|                                                                  |
 //|  IMPORTANTE: este indicador NÃO gera sinal de entrada.           |
 //|  Estudo de evento (26k eventos) rejeitou continuação nestes      |
 //|  horizontes. Breadth/matriz são LEITURA DO PRESENTE (a pesquisa  |
@@ -72,7 +93,7 @@
 //|  Barra em formação (shift 0) = cópia cosmética da última fechada.|
 //+------------------------------------------------------------------+
 #property copyright "Carlos — motor CSSM (validado por estudo de evento)"
-#property version   "1.41"
+#property version   "1.42"
 #property description "+ janelas por horizonte temporal (WM_HOURS) + camada relacional (matriz 8x8, breadth)"
 #property indicator_separate_window
 #property indicator_buffers 40
@@ -150,6 +171,10 @@ input ENUM_TIMEFRAMES InpGT3 = PERIOD_H4;      // MTF 3
 input ENUM_TIMEFRAMES InpGT4 = PERIOD_D1;      // MTF 4
 input ENUM_TIMEFRAMES InpGT5 = PERIOD_W1;      // MTF 5
 input ENUM_TIMEFRAMES InpGT6 = PERIOD_MN1;     // MTF 6
+
+// v1.42 — input NOVO e no FIM de propósito: iCustom posicional de EAs antigos
+// continua válido (parâmetros omitidos assumem o default).
+input bool   InpShowER = true;   // coluna "er" no painel (observação — ver P2)
 
 //--- moedas e cores
 string cur[8]    = {"USD","EUR","GBP","JPY","CHF","CAD","AUD","NZD"};
@@ -1035,19 +1060,20 @@ void DrawPanel()
    prevLayout=layout;
 
    int rh=InpFont+9;
+   int chpx=(InpFont*7)/9; if(chpx<5) chpx=5;   // avanço aprox. Consolas
    int colName=0, colBar=36, colState=116;
    int barW=72, stW=82;
    int ampW=(rel?48:0);                     // v1.40: coluna "amp" após o estado
    int colAmp=colState+stW+6;
    int colRest=204+ampW;
    int cellW=20;
-   int colGrid=colRest+196;
+   int erW=(InpShowER? 5*chpx : 0);         // v1.42: coluna "er" após pers
+   int colGrid=colRest+196+erW;
    int colAlin=colGrid+6*cellW+8;
-   int colW=(InpMTF? colAlin+40 : colRest+206);
+   int colW=(InpMTF? colAlin+40 : colRest+206+erW);
    int cw=(int)ChartGetInteger(0,CHART_WIDTH_IN_PIXELS);
    int x=cw-InpPanelX-colW+6; if(x<6) x=6;
    int y=InpPanelY;
-   int chpx=(InpFont*7)/9; if(chpx<5) chpx=5;   // avanço aprox. Consolas
 
    bool foot2=(rel || (InpRelational && gRelSlow));
    int nrows=11+(foot2?1:0)+(lens?1:0);
@@ -1055,7 +1081,9 @@ void DrawPanel()
    string hdr=StringFormat("CSSM CONTEXTO  %s",TfStr(InpTF));
    if(InpWindowMode==WM_HOURS) hdr+=StringFormat("  w=%d%s",gWMid,LayerSfx(gLayer));
    Lbl(PPFX+"hd",win,x,y,hdr,clrWhiteSmoke);
-   Lbl(PPFX+"hd2",win,x+colRest,y+rh," DIR    M      t   pers acc",C'150,150,150');
+   Lbl(PPFX+"hd2",win,x+colRest,y+rh,
+       InpShowER? " DIR    M      t   pers  er acc"
+                : " DIR    M      t   pers acc",C'150,150,150');
    Lbl(PPFX+"hd3",win,x+colState,y+rh,"ESTADO(idade)",C'150,150,150');
    if(rel) Lbl(PPFX+"hdA",win,x+colAmp,y+rh,"amp",C'150,150,150');
    if(InpMTF)
@@ -1132,8 +1160,12 @@ void DrawPanel()
       Lbl(PPFX+"rw"+(string)r,win,x+colRest,yy,dirs,C'205,205,210');
       Lbl(PPFX+"rm"+(string)r,win,x+colRest+6*chpx,yy,
           StringFormat("%+5.2f",m),spur? C'130,130,135':C'205,205,210');
-      Lbl(PPFX+"rx"+(string)r,win,x+colRest+12*chpx,yy,
-          StringFormat("%+6.1f %4.2f  %s",t,pe,Arr(gAccZ0[c])),C'205,205,210');
+      // v1.42: "er" entre pers e acc — número cru, SEM destaque no limiar
+      // (hipótese exploratória; ver P2 em detector-g8/research/p2_er_prospectivo)
+      string rest=InpShowER
+         ? StringFormat("%+6.1f %4.2f %4.2f  %s",t,pe,gER[c*gLf+0],Arr(gAccZ0[c]))
+         : StringFormat("%+6.1f %4.2f  %s",t,pe,Arr(gAccZ0[c]));
+      Lbl(PPFX+"rx"+(string)r,win,x+colRest+12*chpx,yy,rest,C'205,205,210');
 
       // grade MTF
       if(InpMTF)

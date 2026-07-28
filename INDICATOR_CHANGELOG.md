@@ -1,5 +1,53 @@
 # CSSM_Contexto — changelog do indicador
 
+## v1.42 (2026-07-28) — coluna `er` no painel (SOMENTE EXIBIÇÃO)
+
+**O ER já era calculado desde a v1.30** — o `M` depende dele
+(`M = sign(t)·min(|t|/2,1)·ER`) — mas era **o único ingrediente do M que não
+aparecia no painel**. Esta versão só o exibe.
+
+Motivação (pesquisa detector-g8, jul-2026):
+- **b1**: o ER contínuo ordena a captura restante **2× melhor** que o rótulo de
+  4 estados (|ρ| 0,5135 vs 0,2640; Δ +0,2496 IC[+0,09 · +0,41]).
+- **b9/b10**: `|ER| ≥ 0,2528 ∧ zS` confirma melhor que `|M| ≥ 0,20 ∧ zS`
+  (+0,41 a +0,84pp em 4 células, zero inversões).
+
+⚠ **STATUS: HIPÓTESE EXPLORATÓRIA.** Congelada em pré-registro prospectivo
+**P2** (`detector-g8/research/p2_er_prospectivo/`). A coluna existe para
+**observação**, não para operar.
+
+**Por que NÃO há marcador de ligado/desligado no limiar:** o painel já teve uma
+regra que acendia como gatilho (a "candidata") e detectou **0% no teste selado**
+do ifm-lab. Número cru, sem destaque — quem quiser o limiar, lê o número.
+
+**Como ler** — o ER tem dois papéis, e confundi-los é o jeito de errar:
+- como **portão** (~0,25 com o zS ligado): marca o cruzamento que merece atenção;
+- como **gradiente dentro do movimento**: ER alto = **pouca captura restante**
+  (b1, ρ −0,51). Não é "entre agora", é "já andou".
+
+### Âncoras de linha em `Cssm.mq5` (1.640 linhas; v1.41 tinha 1.607)
+
+| Mudança | Onde | O quê |
+|---|---|---|
+| Cabeçalho | 59–81 | bloco v1.42: motivação, status exploratório, como ler, e a nota de que `InpShowER=false` restaura o layout v1.41 EXATO |
+| Versão | 92 | `#property version "1.42"` |
+| Input novo | 173–177 | `InpShowER` (default `true`) — **no FIM de propósito**: `iCustom` posicional de EAs antigos continua válido (parâmetros omitidos assumem o default) |
+| Layout | 1063 | `chpx` movido para cima (era declarado depois) — mesma expressão, sem efeito |
+| Layout | 1070–1073 | `erW`; `colGrid` e `colW` deslocados por `erW` (o `colW` também no ramo `InpMTF=false`, senão a coluna cortaria) |
+| Cabeçalho do painel | 1084–1086 | header condicional: `" DIR    M      t   pers  er acc"` |
+| Linha do painel | 1165–1169 | `er` entre `pers` e `acc`, lendo `gER[c*gLf+0]` — o mesmo array que o `M` já usa |
+
+### Paridade
+
+**Preservada por construção: ZERO linhas de cálculo, de buffer ou de gate foram
+tocadas.** O diff inteiro é layout + uma leitura de array já existente. O
+contrato de buffers 0–39 é idêntico.
+
+⚠ **Pendente (👤):** recompilar no MetaEditor e rodar `Export_CSSM_Parity.mq5`
+para o carimbo formal. Não dá para fazer fora do MT5.
+
+- sha256 do `Cssm.mq5` v1.42: `e61c0c4366b49fce…`
+
 ## NOTA DE PESQUISA (2026-07-11) — CSS é APENAS DESCRITIVO (a37 fecha o a26b)
 
 O a26b sugeriu que o CSS servia como "confirmação concorrente" (movimento
