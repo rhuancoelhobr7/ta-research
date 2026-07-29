@@ -1,5 +1,39 @@
 # CSSM_Contexto — changelog do indicador
 
+## v1.43 (2026-07-28) — layout escalado pelo DPI (corrige sobreposição)
+
+**Bug ANTERIOR à v1.42, corrigido agora.** O painel estimava a largura de um
+caractere com `chpx = InpFont*7/9`, número fixo que assume **96 DPI**. Com o
+Windows em 125% ou 150%, a Consolas renderiza mais larga do que o código supõe
+e as colunas se sobrepõem.
+
+E não era só em DPI alto: a conta mostra que a folga do cabeçalho
+`ESTADO(idade)` contra a coluna `amp` era de **−3 px já em 96 DPI** —
+`colAmp - (colState + 13·chpx) = 204 - 207`. **Sobrepunha para todo mundo,
+sempre.** Aparecia como `ESTADO(idade)ap`.
+
+### O que mudou
+
+| | antes | agora |
+|---|---|---|
+| largura do caractere | `InpFont*7/9` (fixo, 96 DPI) | `InpFont*7*dpi/(9*96)` via `TERMINAL_SCREEN_DPI` |
+| `colBar`, `colState`, `stW`, `colAmp`, `ampW`, `colRest`, `cellW`, `colGrid`, `colAlin`, `colW` | constantes mágicas | **derivados de `chpx`**, com `MathMax` preservando os mínimos antigos |
+| offset do `•soft` no `amp` | `+26` fixo | `+4·chpx` |
+| offset do nome (⚠) | `+13` fixo | `+2·chpx` |
+
+Folga resultante, verificada por simulação em 96/120/144/192 DPI:
+**+8 px no cabeçalho `hd2` e +4 px no `ESTADO`, em todos.**
+
+Em 96 DPI o layout fica praticamente onde estava (`colGrid` 489 vs 483) — não
+há salto visual para quem já estava bem.
+
+### Paridade
+
+**Preservada: zero linhas de cálculo, de buffer ou de gate.** Só geometria de
+painel. Contrato de buffers 0–39 idêntico.
+
+- sha256 do `Cssm.mq5` v1.43: `22591bde9ba581ea…`
+
 ## v1.42 (2026-07-28) — coluna `er` no painel (SOMENTE EXIBIÇÃO)
 
 **O ER já era calculado desde a v1.30** — o `M` depende dele

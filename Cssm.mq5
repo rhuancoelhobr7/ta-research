@@ -93,7 +93,7 @@
 //|  Barra em formação (shift 0) = cópia cosmética da última fechada.|
 //+------------------------------------------------------------------+
 #property copyright "Carlos — motor CSSM (validado por estudo de evento)"
-#property version   "1.42"
+#property version   "1.43"
 #property description "+ janelas por horizonte temporal (WM_HOURS) + camada relacional (matriz 8x8, breadth)"
 #property indicator_separate_window
 #property indicator_buffers 40
@@ -1060,17 +1060,26 @@ void DrawPanel()
    prevLayout=layout;
 
    int rh=InpFont+9;
-   int chpx=(InpFont*7)/9; if(chpx<5) chpx=5;   // avanço aprox. Consolas
-   int colName=0, colBar=36, colState=116;
-   int barW=72, stW=82;
-   int ampW=(rel?48:0);                     // v1.40: coluna "amp" após o estado
-   int colAmp=colState+stW+6;
-   int colRest=204+ampW;
-   int cellW=20;
-   int erW=(InpShowER? 5*chpx : 0);         // v1.42: coluna "er" após pers
-   int colGrid=colRest+196+erW;
+   // v1.43 — largura de caractere ESCALADA PELO DPI da tela. A estimativa
+   // antiga (InpFont*7/9) assumia 96 DPI; com Windows a 125%/150% a Consolas
+   // renderiza mais larga e as colunas se sobrepõem (o "ESTADO(idade)" invadia
+   // o "amp" já na v1.40). Em 96 DPI os valores batem com os antigos.
+   int dpi=(int)TerminalInfoInteger(TERMINAL_SCREEN_DPI); if(dpi<72) dpi=96;
+   int chpx=(InpFont*7*dpi)/(9*96); if(chpx<5) chpx=5;
+   int colName=0;
+   int nmOff=(rel? 2*chpx : 0);             // deslocamento p/ o ⚠
+   int colBar=MathMax(36,nmOff+4*chpx);     // nome = 3 chars + folga
+   int barW=72;
+   int colState=MathMax(116,colBar+barW+6);
+   int stW=MathMax(82,12*chpx);             // cabe "Emergindo 99"
+   int colAmp=colState+MathMax(stW+6,13*chpx+4);   // "ESTADO(idade)" = 13 ch
+   int ampW=(rel? MathMax(48,7*chpx) : 0);  // v1.40: "0/7•6" após o estado
+   int colRest=colAmp+ampW;
+   int cellW=MathMax(20,3*chpx+2);
+   int hdrN=(InpShowER? 31 : 27);           // nº de chars do cabeçalho hd2
+   int colGrid=colRest+hdrN*chpx+8;
    int colAlin=colGrid+6*cellW+8;
-   int colW=(InpMTF? colAlin+40 : colRest+206+erW);
+   int colW=(InpMTF? colAlin+6*chpx+8 : colGrid+8);
    int cw=(int)ChartGetInteger(0,CHART_WIDTH_IN_PIXELS);
    int x=cw-InpPanelX-colW+6; if(x<6) x=6;
    int y=InpPanelY;
@@ -1126,7 +1135,7 @@ void DrawPanel()
              spur? ShortToString(0x26A0):" ",clrOrange);
 
       // nome na cor da linha (desloca p/ dar lugar ao ⚠ quando rel)
-      Lbl(PPFX+"nm"+(string)r,win,x+colName+(rel?13:0),yy,cur[c],colArr[c]);
+      Lbl(PPFX+"nm"+(string)r,win,x+colName+nmOff,yy,cur[c],colArr[c]);
 
       // barra de força: trilho + preenchimento a partir do centro
       int cx0=x+colBar, cy=yy+2, half=barW/2;
@@ -1151,7 +1160,7 @@ void DrawPanel()
                   ((dr>0)? C'90,200,130' : C'230,120,105');
          Lbl(PPFX+"ah"+(string)r,win,x+colAmp,yy,
              StringFormat("%d/7",hN),hc);
-         Lbl(PPFX+"as"+(string)r,win,x+colAmp+26,yy,
+         Lbl(PPFX+"as"+(string)r,win,x+colAmp+4*chpx,yy,   // v1.43: era +26 fixo
              ShortToString(0x2022)+IntegerToString(sN),C'110,110,118');
       }
 
