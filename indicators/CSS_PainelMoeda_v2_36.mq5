@@ -143,7 +143,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.36"
+#property version   "2.37"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -218,6 +218,8 @@ input bool   InpAlerts   = false; // alertas de cruzamento da box (ligue se quis
 // existir). Input no FIM: iCustom posicional de EAs antigos continua valido.
 enum EModoPainel { MP_TF=0, MP_MOEDA=1 };
 input EModoPainel InpPainelModo = MP_MOEDA; // painel: MOEDA-maior (novo) ou TF-maior
+input int    InpFontPainel = 11;   // v2.37: fonte do painel por moeda (maior)
+input bool   InpNeon       = true; // v2.37: visual futurista (acento neon)
 input double InpDiffThr  = 0.0;  // distancia minima de forca (regra de ouro)
 input bool   InpAddSunday= true; // somar candle de domingo na segunda
 input int    InpPesoK    = 3;    // k (barras fechadas do TF) p/ dpeso — pre-registro a13
@@ -250,6 +252,7 @@ bool   gSingle = false; // estado do botao linha unica
 bool   gBoxPrev[8];     // estado anterior: estava fora da box?
 bool   gHide[8];        // moeda oculta? (toggle pelo painel)
 int    gRowCur[8];      // linha r do painel (col A) -> indice da moeda
+int    gSolo = -1;      // v2.37: moeda isolada no painel MOEDA (-1 = nenhuma)
 bool   gAlertInit=false;
 // v2.35: corretora entrega candle de domingo? (addSundayToMonday do original)
 bool   gSundayCandles=false;
@@ -682,6 +685,40 @@ void Lbl(string nm,int win,int x,int y,string txt,color cl)
    ObjectSetInteger(0,nm,OBJPROP_BACK,false);
    ObjectSetInteger(0,nm,OBJPROP_SELECTABLE,false);
 }
+// v2.37: label com tamanho de fonte proprio (o painel novo usa fonte maior)
+void LblF(string nm,int win,int x,int y,string txt,color cl,int fs,string fnt="Consolas")
+{
+   if(ObjectFind(0,nm)<0) ObjectCreate(0,nm,OBJ_LABEL,win,0,0);
+   ObjectSetInteger(0,nm,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,nm,OBJPROP_YDISTANCE,y);
+   ObjectSetInteger(0,nm,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+   ObjectSetInteger(0,nm,OBJPROP_ANCHOR,ANCHOR_LEFT_UPPER);
+   ObjectSetString (0,nm,OBJPROP_TEXT,txt);
+   ObjectSetString (0,nm,OBJPROP_FONT,fnt);
+   ObjectSetInteger(0,nm,OBJPROP_FONTSIZE,fs);
+   ObjectSetInteger(0,nm,OBJPROP_COLOR,cl);
+   ObjectSetInteger(0,nm,OBJPROP_BACK,false);
+   ObjectSetInteger(0,nm,OBJPROP_SELECTABLE,false);
+}
+// v2.37: botao do painel novo (moeda / TODAS)
+void BtnP(string nm,int win,int x,int y,int w,int h,string txt,
+          color bg,color fg,int fs)
+{
+   if(ObjectFind(0,nm)<0) ObjectCreate(0,nm,OBJ_BUTTON,win,0,0);
+   ObjectSetInteger(0,nm,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+   ObjectSetInteger(0,nm,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,nm,OBJPROP_YDISTANCE,y);
+   ObjectSetInteger(0,nm,OBJPROP_XSIZE,w);
+   ObjectSetInteger(0,nm,OBJPROP_YSIZE,h);
+   ObjectSetString (0,nm,OBJPROP_TEXT,txt);
+   ObjectSetString (0,nm,OBJPROP_FONT,"Consolas");
+   ObjectSetInteger(0,nm,OBJPROP_FONTSIZE,fs);
+   ObjectSetInteger(0,nm,OBJPROP_BGCOLOR,bg);
+   ObjectSetInteger(0,nm,OBJPROP_COLOR,fg);
+   ObjectSetInteger(0,nm,OBJPROP_BORDER_COLOR,bg);
+   ObjectSetInteger(0,nm,OBJPROP_STATE,false);
+   ObjectSetInteger(0,nm,OBJPROP_BACK,false);
+}
 // v2.33: borda parametrizavel (default = comportamento v2.32). Celulas
 // internas passam borda = fundo (visual chapado, estilo CSSM).
 void Rect(string nm,int win,int x,int y,int w,int hgt,color bg,color border=C'80,80,90')
@@ -961,56 +998,114 @@ void DrawPanelMoeda()
       }
    }
 
+   // ordem: |V| decrescente (a mais mobilizada no topo)
    int ord[8]; for(int i=0;i<8;i++) ord[i]=i;
    for(int i=0;i<7;i++) for(int j2=i+1;j2<8;j2++)
       if(MathAbs(Vn[ord[j2]])>MathAbs(Vn[ord[i]])){ int t=ord[i]; ord[i]=ord[j2]; ord[j2]=t; }
 
-   int chpx=(InpFont*7)/9; if(chpx<5) chpx=5;
-   int rh=InpFont+9;
-   int cMoeda=0, cPos=5*chpx, cAng=11*chpx, cEst=18*chpx, cMtf=28*chpx;
-   int cellw=4*chpx;
-   int colW=cMtf+4*cellw+8;
+   // ---- paleta
+   color BG      = InpNeon ? C'10,12,18'      : C'24,24,32';
+   color BORDA   = InpNeon ? C'0,200,225'     : C'80,80,90';
+   color ACC     = InpNeon ? C'0,200,225'     : C'150,150,150';
+   color ROW_A   = InpNeon ? C'15,18,26'    : C'38,38,46';
+   color ROW_B   = InpNeon ? C'19,23,33'    : C'38,38,46';
+   color TXT     = C'225,230,238';
+   color TXT_DIM = C'120,132,150';
+   color TRACK   = C'28,32,44';
+
+   // ---- geometria (fonte maior => tudo maior)
+   int fs=InpFontPainel; if(fs<8) fs=8;
+   int chpx=(fs*3)/4; if(chpx<6) chpx=6;
+   int rh=fs+14;
+   int pad=10;
+   int xBtn=pad, wBtn=6*chpx;
+   int xGau=xBtn+wBtn+10, wGau=13*chpx;
+   int xPos=xGau+wGau+10;
+   int xAng=xPos+7*chpx;
+   int xEst=xAng+7*chpx;
+   int wEst=10*chpx;
+   int xMtf=xEst+wEst+10, wCel=(7*chpx)/2;
+   int colW=xMtf+4*wCel+pad;
+   int hHdr=rh+8;
+   int hTot=hHdr+rh+rh*8+rh+14;
+
    int cw=(int)ChartGetInteger(0,CHART_WIDTH_IN_PIXELS);
    int x=cw-InpPanelX-colW+6; if(x<6) x=6;
    int y=InpPanelY;
 
-   Rect(PPFX+"bg",win,x-6,y-6,colW+8,rh*11+14,C'24,24,32');
-   Lbl(PPFX+"hd",win,x,y,
-       StringFormat("CSS por MOEDA  linhas:%s  box:%.2f  k=%d",
-                    TfStr(gLineTF),InpBox,InpPesoK),clrWhiteSmoke);
-   Lbl(PPFX+"h1",win,x+cPos,y+rh,"pos",C'150,150,150');
-   Lbl(PPFX+"h2",win,x+cAng,y+rh,"ang",C'150,150,150');
-   Lbl(PPFX+"h3",win,x+cEst,y+rh,"estado",C'150,150,150');
+   // ---- moldura + barra de titulo
+   Rect(PPFX+"bg",win,x,y,colW,hTot,BG,BORDA);
+   Rect(PPFX+"hdbar",win,x+1,y+1,colW-2,hHdr-2,InpNeon?C'14,18,28':C'38,38,46',
+        InpNeon?C'14,18,28':C'38,38,46');
+   Rect(PPFX+"hdline",win,x+1,y+hHdr-2,colW-2,2,ACC,ACC);
+   LblF(PPFX+"hd",win,x+pad,y+5,"CSS "+ShortToString(0x00B7)+" POR MOEDA",ACC,fs+1);
+   LblF(PPFX+"hd2",win,x+colW-pad-16*chpx,y+7,
+        StringFormat("%s  box %.2f  k%d",TfStr(gLineTF),InpBox,InpPesoK),TXT_DIM,fs-1);
+
+   // ---- botao TODAS (limpa o solo)
+   int yB=y+hHdr+3;
+   BtnP(PPFX+"btnAll",win,x+pad,yB,wBtn+10,rh-6,
+        (gSolo<0)?"TODAS":"< TODAS",
+        (gSolo<0)?C'0,200,225':C'26,32,44', (gSolo<0)?C'8,12,18':TXT, fs-1);
+   LblF(PPFX+"chd0",win,x+xGau,yB+2,"FORCA",TXT_DIM,fs-2);
+   LblF(PPFX+"chd1",win,x+xPos,yB+2,"POS",TXT_DIM,fs-2);
+   LblF(PPFX+"chd2",win,x+xAng,yB+2,"ANG",TXT_DIM,fs-2);
+   LblF(PPFX+"chd3",win,x+xEst,yB+2,"ESTADO",TXT_DIM,fs-2);
    for(int j=0;j<4;j++)
-      Lbl(PPFX+"hm"+(string)j,win,x+cMtf+j*cellw,y+rh,TfStr(mtf[j]),C'150,150,150');
+      LblF(PPFX+"chm"+(string)j,win,x+xMtf+j*wCel,yB+2,TfStr(mtf[j]),TXT_DIM,fs-2);
 
    string up=ShortToString(0x25B2), dn=ShortToString(0x25BC), mid=ShortToString(0x00B7);
+   int y0=yB+rh;
+
    for(int r=0;r<8;r++)
    {
       int c=ord[r];
-      int yy=y+rh*(r+2);
+      gRowCur[r]=c;
+      int yy=y0+rh*r;
       double v=Vn[c], dAbs=MathAbs(Vn[c])-MathAbs(Vp[c]);
       color cEstado; string est=EstadoStr(v,dAbs,cEstado);
+      bool solo=(gSolo==c), off=gHide[c];
 
-      color cellBg = (v>=InpBox)? C'18,64,28' : ((v<=-InpBox)? C'78,22,22' : C'38,38,46');
-      if(gHide[c]) cellBg=C'30,30,34';
-      Rect(PPFX+"cel"+(string)r,win,x-2,yy-1,colW-2,rh-1,cellBg,cellBg);
+      color rowBg = solo ? (InpNeon?C'22,40,52':C'38,38,46') : ((r%2==0)?ROW_A:ROW_B);
+      if(off && !solo) rowBg=C'14,15,19';
+      Rect(PPFX+"row"+(string)r,win,x+1,yy,colW-2,rh-1,rowBg,solo?ACC:rowBg);
+      // faixa de acento na cor da moeda
+      Rect(PPFX+"stp"+(string)r,win,x+2,yy+2,4,rh-5,
+           off?C'50,54,62':colArr[c], off?C'50,54,62':colArr[c]);
 
-      Lbl(PPFX+"nm"+(string)r,win,x+cMoeda,yy,cur[c], gHide[c]?C'90,90,90':colArr[c]);
-      Lbl(PPFX+"po"+(string)r,win,x+cPos,yy,StringFormat("%+5.2f",v),C'215,215,220');
-      Lbl(PPFX+"an"+(string)r,win,x+cAng,yy,StringFormat("%+5.2f",dAbs),
-          (dAbs>0)?C'110,200,140':C'215,140,130');
-      Lbl(PPFX+"es"+(string)r,win,x+cEst,yy,est,cEstado);
+      // botao da moeda (clique = isolar)
+      BtnP(PPFX+"btn"+(string)c,win,x+xBtn,yy+2,wBtn,rh-5,cur[c],
+           solo?C'0,150,175':C'24,29,40', off?C'80,86,96':colArr[c], fs);
+
+      // medidor de forca
+      int wfill=(int)MathRound(wGau*MathMin(MathAbs(v)/InpScaleMax,1.0));
+      if(wfill<2) wfill=2;
+      color barc = off?C'60,64,72' : ((v>=0)?C'60,220,150':C'240,110,110');
+      Rect(PPFX+"trk"+(string)r,win,x+xGau,yy+rh/2-4,wGau,7,TRACK,TRACK);
+      Rect(PPFX+"gau"+(string)r,win,x+xGau,yy+rh/2-4,wfill,7,barc,barc);
+
+      LblF(PPFX+"po"+(string)r,win,x+xPos,yy+5,StringFormat("%+5.2f",v),
+           off?C'80,86,96':TXT,fs);
+      LblF(PPFX+"an"+(string)r,win,x+xAng,yy+5,StringFormat("%+5.2f",dAbs),
+           off?C'80,86,96':((dAbs>0)?C'90,220,160':C'240,130,120'),fs);
+
+      // ESTADO como chip
+      Rect(PPFX+"chip"+(string)r,win,x+xEst-3,yy+3,wEst,rh-7,
+           off?C'40,44,52':cEstado, off?C'40,44,52':cEstado);
+      LblF(PPFX+"es"+(string)r,win,x+xEst,yy+5,est,C'10,14,20',fs-2);
+
       for(int j=0;j<4;j++)
       {
          string a=(mdir[j][c]>0)?up:((mdir[j][c]<0)?dn:mid);
-         Lbl(PPFX+"m"+(string)r+"_"+(string)j,win,x+cMtf+j*cellw,yy,a,
-             (mdir[j][c]>0)?C'110,200,140':((mdir[j][c]<0)?C'220,120,110':C'120,120,128'));
+         color ac = off?C'80,86,96' : ((mdir[j][c]>0)?C'70,215,150':
+                    ((mdir[j][c]<0)?C'240,120,110':C'90,100,116'));
+         LblF(PPFX+"m"+(string)r+"_"+(string)j,win,x+xMtf+j*wCel+wCel/3,yy+5,a,ac,fs-1);
       }
    }
-   Lbl(PPFX+"lg",win,x,y+rh*10,
-       "leitura, nao sinal - pos(a12) e ang(a13) NULOS como preditores",
-       C'120,120,128');
+
+   LblF(PPFX+"lg",win,x+pad,y0+rh*8+4,
+        "leitura, nao sinal "+ShortToString(0x00B7)+
+        " pos(a12) e ang(a13) NULOS como preditores",TXT_DIM,fs-3);
 }
 //+------------------------------------------------------------------+
 void DrawPanel(const double &V1[],const double &V2[],const double &V3[],
@@ -1619,6 +1714,32 @@ void OnChartEvent(const int id, const long &lparam,
                   const double &dparam, const string &sparam)
 {
    if(id!=CHARTEVENT_OBJECT_CLICK) return;
+
+   // v2.37 — painel MOEDA: botao TODAS limpa o solo
+   if(sparam==PPFX+"btnAll")
+   {
+      gSolo=-1;
+      for(int i=0;i<8;i++) gHide[i]=false;
+      ObjectSetInteger(0,sparam,OBJPROP_STATE,false);
+      gReady=false; Compute(); ChartRedraw();
+      return;
+   }
+   // v2.37 — painel MOEDA: clique no botao da moeda ISOLA a linha dela
+   {
+      string pb=PPFX+"btn";
+      if(StringFind(sparam,pb)==0 && sparam!=PPFX+"btnAll")
+      {
+         int c=(int)StringToInteger(StringSubstr(sparam,StringLen(pb)));
+         if(c>=0 && c<8)
+         {
+            if(gSolo==c){ gSolo=-1; for(int i=0;i<8;i++) gHide[i]=false; }
+            else        { gSolo=c;  for(int i=0;i<8;i++) gHide[i]=(i!=c); }
+            ObjectSetInteger(0,sparam,OBJPROP_STATE,false);
+            gReady=false; Compute(); ChartRedraw();
+         }
+         return;
+      }
+   }
 
    // v2.34: troca de TF das linhas (mantem o instante do replay)
    if(sparam==PFX+"tfDn" || sparam==PFX+"tfUp")
