@@ -143,7 +143,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.37"
+#property version   "2.38"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -194,6 +194,11 @@ input bool   InpUseATR   = true; // (legado v2.34 - o original sempre normaliza 
 input double InpScale    = 1.00; // escala (original = 1.00; a box 0.20 ja e a do CSS)
 input double InpBox      = 0.20; // box +/- (LevelCrossValue)
 input double InpScaleMax = 1.00; // escala fixa da janela (+/-): enquadra a box
+// v2.38: o CLAMP dos valores continua em +/-(InpScaleMax-0.02), mas a JANELA
+// passa a ser +/-(InpScaleMax*InpFolga). Antes os dois eram o mesmo numero, e
+// por isso toda linha saturada (o clamp +/-0.98 do FALHAS C.4) colava na borda
+// e brigava com o painel. Com folga 1.35 as linhas ocupam ~73% da altura.
+input double InpFolga    = 1.35; // folga vertical da janela (1.00 = sem folga)
 input int    InpBars     = 300;  // barras a plotar
 input ENUM_TIMEFRAMES InpLineTF = PERIOD_CURRENT; // TF das LINHAS
 input bool InpSyncBars = true; // sincronizar linhas com a barra do grafico (backtest)
@@ -218,7 +223,7 @@ input bool   InpAlerts   = false; // alertas de cruzamento da box (ligue se quis
 // existir). Input no FIM: iCustom posicional de EAs antigos continua valido.
 enum EModoPainel { MP_TF=0, MP_MOEDA=1 };
 input EModoPainel InpPainelModo = MP_MOEDA; // painel: MOEDA-maior (novo) ou TF-maior
-input int    InpFontPainel = 11;   // v2.37: fonte do painel por moeda (maior)
+input int    InpFontPainel = 13;   // v2.37: fonte do painel por moeda (maior)
 input bool   InpNeon       = true; // v2.37: visual futurista (acento neon)
 input double InpDiffThr  = 0.0;  // distancia minima de forca (regra de ouro)
 input bool   InpAddSunday= true; // somar candle de domingo na segunda
@@ -1084,7 +1089,9 @@ void DrawPanelMoeda()
       Rect(PPFX+"trk"+(string)r,win,x+xGau,yy+rh/2-4,wGau,7,TRACK,TRACK);
       Rect(PPFX+"gau"+(string)r,win,x+xGau,yy+rh/2-4,wfill,7,barc,barc);
 
-      LblF(PPFX+"po"+(string)r,win,x+xPos,yy+5,StringFormat("%+5.2f",v),
+      bool sat = (MathAbs(v) >= InpScaleMax-0.021);   // v2.38: no clamp
+      LblF(PPFX+"po"+(string)r,win,x+xPos,yy+5,
+           StringFormat("%+5.2f%s",v,sat?"*":" "),
            off?C'80,86,96':TXT,fs);
       LblF(PPFX+"an"+(string)r,win,x+xAng,yy+5,StringFormat("%+5.2f",dAbs),
            off?C'80,86,96':((dAbs>0)?C'90,220,160':C'240,130,120'),fs);
@@ -1104,8 +1111,8 @@ void DrawPanelMoeda()
    }
 
    LblF(PPFX+"lg",win,x+pad,y0+rh*8+4,
-        "leitura, nao sinal "+ShortToString(0x00B7)+
-        " pos(a12) e ang(a13) NULOS como preditores",TXT_DIM,fs-3);
+        "* = no clamp "+ShortToString(0x00B7)+" leitura, nao sinal "+ShortToString(0x00B7)+
+        " pos(a12) e ang(a13) NULOS",TXT_DIM,fs-3);
 }
 //+------------------------------------------------------------------+
 void DrawPanel(const double &V1[],const double &V2[],const double &V3[],
@@ -1214,7 +1221,7 @@ void DrawEndLabels(int win)
    for(int i=0;i<7;i++) for(int j=i+1;j<8;j++)
       if(v[ord[j]]>v[ord[i]]){ int t=ord[i]; ord[i]=ord[j]; ord[j]=t; }
    int hpx=(int)ChartGetInteger(0,CHART_HEIGHT_IN_PIXELS,win);
-   double range=2.0*InpScaleMax;
+   double range=2.0*InpScaleMax*(InpFolga>=1.0? InpFolga : 1.0);   // v2.38
    double minSep=(hpx>0)? range*(InpFont+5)/(double)hpx : 0.05;
 
    double prevY=0; bool first=true;
@@ -1471,8 +1478,9 @@ int OnInit()
       }
 
    IndicatorSetInteger(INDICATOR_LEVELS,0);
-   IndicatorSetDouble(INDICATOR_MINIMUM,-InpScaleMax);
-   IndicatorSetDouble(INDICATOR_MAXIMUM, InpScaleMax);
+   double _folga = (InpFolga>=1.0? InpFolga : 1.0);      // v2.38
+   IndicatorSetDouble(INDICATOR_MINIMUM,-InpScaleMax*_folga);
+   IndicatorSetDouble(INDICATOR_MAXIMUM, InpScaleMax*_folga);
    IndicatorSetString(INDICATOR_SHORTNAME,"Currency Slope Strength (CSS original)");
    IndicatorSetInteger(INDICATOR_DIGITS,3);
    EventSetTimer(2);
