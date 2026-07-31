@@ -143,7 +143,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.38"
+#property version   "2.39"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -510,6 +510,29 @@ int ComputeAt(ENUM_TIMEFRAMES tf, int kShift, double &out[])
 }
 int ComputeNow(ENUM_TIMEFRAMES tf, double &out[]) { return ComputeAt(tf,0,out); }
 //+------------------------------------------------------------------+
+//| v2.39: MESMO calculo do ComputeAt, mas SEM o clamp. As LINHAS     |
+//| continuam clampadas (precisam caber na janela); o PAINEL passa a  |
+//| mostrar o valor real. Antes, com quatro moedas no teto +/-0.98, a |
+//| coluna ang media a aproximacao do teto, nao a inclinacao.         |
+//+------------------------------------------------------------------+
+int ComputeAtRaw(ENUM_TIMEFRAMES tf, int kShift, double &out[])
+{
+   double acc[8]; ArrayInitialize(acc,0);
+   int good=0;
+   for(int p=0;p<gPairsN;p++)
+   {
+      double sl[];
+      if(!PairSlopes(gPair[p],tf,kShift+1,sl)) continue;
+      if(sl[kShift]==EMPTY_VALUE) continue;
+      acc[gBaseIdx[p]]  += sl[kShift];
+      acc[gQuoteIdx[p]] -= sl[kShift];
+      good++;
+   }
+   for(int c=0;c<8;c++)
+      out[c] = (cnt[c]>0)? (acc[c]/cnt[c])*InpScale : 0.0;
+   return good;
+}
+//+------------------------------------------------------------------+
 //| v2.33: valor de slope POR PAR p/ a aba MATRIZ.                   |
 //| Replica passo a passo o corpo por-par do ComputeAt (mesmo W,     |
 //| mesma ancora, mesmo norm/TMA/z/clamp) — so NAO agrega na cesta.  |
@@ -703,6 +726,7 @@ void LblF(string nm,int win,int x,int y,string txt,color cl,int fs,string fnt="C
    ObjectSetInteger(0,nm,OBJPROP_FONTSIZE,fs);
    ObjectSetInteger(0,nm,OBJPROP_COLOR,cl);
    ObjectSetInteger(0,nm,OBJPROP_BACK,false);
+   ObjectSetInteger(0,nm,OBJPROP_ZORDER,30);      // v2.39: texto acima dos retangulos
    ObjectSetInteger(0,nm,OBJPROP_SELECTABLE,false);
 }
 // v2.37: botao do painel novo (moeda / TODAS)
@@ -723,10 +747,11 @@ void BtnP(string nm,int win,int x,int y,int w,int h,string txt,
    ObjectSetInteger(0,nm,OBJPROP_BORDER_COLOR,bg);
    ObjectSetInteger(0,nm,OBJPROP_STATE,false);
    ObjectSetInteger(0,nm,OBJPROP_BACK,false);
+   ObjectSetInteger(0,nm,OBJPROP_ZORDER,50);        // v2.39: botao no topo
 }
 // v2.33: borda parametrizavel (default = comportamento v2.32). Celulas
 // internas passam borda = fundo (visual chapado, estilo CSSM).
-void Rect(string nm,int win,int x,int y,int w,int hgt,color bg,color border=C'80,80,90')
+void Rect(string nm,int win,int x,int y,int w,int hgt,color bg,color border=C'80,80,90',int zo=0)
 {
    if(ObjectFind(0,nm)<0) ObjectCreate(0,nm,OBJ_RECTANGLE_LABEL,win,0,0);
    ObjectSetInteger(0,nm,OBJPROP_XDISTANCE,x);
@@ -738,6 +763,7 @@ void Rect(string nm,int win,int x,int y,int w,int hgt,color bg,color border=C'80
    ObjectSetInteger(0,nm,OBJPROP_COLOR,border);
    ObjectSetInteger(0,nm,OBJPROP_CORNER,CORNER_LEFT_UPPER);
    ObjectSetInteger(0,nm,OBJPROP_BACK,false);
+   ObjectSetInteger(0,nm,OBJPROP_ZORDER,zo);        // v2.39
    ObjectSetInteger(0,nm,OBJPROP_SELECTABLE,false);
 }
 //+------------------------------------------------------------------+
@@ -985,17 +1011,19 @@ void DrawPanelMoeda()
    if(!InpPanel) return;
    int win=ChartWindowFind(); if(win<0) return;
 
+   // v2.39: valores SEM clamp (o painel mostra o real; a linha e que e clampada)
    double Vn[8], Vp[8];
-   int g1=ComputeAt(gLineTF,1,Vn);
-   int g2=ComputeAt(gLineTF,1+InpPesoK,Vp);
+   int g1=ComputeAtRaw(gLineTF,1,Vn);
+   int g2=ComputeAtRaw(gLineTF,1+InpPesoK,Vp);
    if(g1<1 || g2<1) return;
+   double lim=InpScaleMax-0.02;      // onde a LINHA satura
 
    ENUM_TIMEFRAMES mtf[4]; mtf[0]=InpTF2; mtf[1]=InpTF3; mtf[2]=InpTF4; mtf[3]=InpTF5;
    int mdir[4][8];
    for(int j=0;j<4;j++)
    {
       double A[8], B[8];
-      int ga=ComputeAt(mtf[j],1,A), gb=ComputeAt(mtf[j],1+InpPesoK,B);
+      int ga=ComputeAtRaw(mtf[j],1,A), gb=ComputeAtRaw(mtf[j],1+InpPesoK,B);
       for(int c=0;c<8;c++)
       {
          double d=(ga<1||gb<1)? 0.0 : (MathAbs(A[c])-MathAbs(B[c]));
@@ -1003,61 +1031,59 @@ void DrawPanelMoeda()
       }
    }
 
-   // ordem: |V| decrescente (a mais mobilizada no topo)
    int ord[8]; for(int i=0;i<8;i++) ord[i]=i;
    for(int i=0;i<7;i++) for(int j2=i+1;j2<8;j2++)
       if(MathAbs(Vn[ord[j2]])>MathAbs(Vn[ord[i]])){ int t=ord[i]; ord[i]=ord[j2]; ord[j2]=t; }
 
-   // ---- paleta
-   color BG      = InpNeon ? C'10,12,18'      : C'24,24,32';
-   color BORDA   = InpNeon ? C'0,200,225'     : C'80,80,90';
-   color ACC     = InpNeon ? C'0,200,225'     : C'150,150,150';
-   color ROW_A   = InpNeon ? C'15,18,26'    : C'38,38,46';
-   color ROW_B   = InpNeon ? C'19,23,33'    : C'38,38,46';
+   color BG      = InpNeon ? C'10,12,18'   : C'24,24,32';
+   color BORDA   = InpNeon ? C'0,200,225'  : C'80,80,90';
+   color ACC     = InpNeon ? C'0,200,225'  : C'150,150,150';
+   color ROW_A   = InpNeon ? C'15,18,26' : C'38,38,46';
+   color ROW_B   = InpNeon ? C'19,23,33' : C'38,38,46';
    color TXT     = C'225,230,238';
    color TXT_DIM = C'120,132,150';
    color TRACK   = C'28,32,44';
 
-   // ---- geometria (fonte maior => tudo maior)
    int fs=InpFontPainel; if(fs<8) fs=8;
    int chpx=(fs*3)/4; if(chpx<6) chpx=6;
-   int rh=fs+14;
-   int pad=10;
-   int xBtn=pad, wBtn=6*chpx;
-   int xGau=xBtn+wBtn+10, wGau=13*chpx;
-   int xPos=xGau+wGau+10;
-   int xAng=xPos+7*chpx;
-   int xEst=xAng+7*chpx;
-   int wEst=10*chpx;
-   int xMtf=xEst+wEst+10, wCel=(7*chpx)/2;
+   int rh=fs+16;
+   int pad=12, gap=3*chpx;                     // v2.39: respiro entre colunas
+
+   int xBtn=pad,              wBtn=7*chpx;
+   int xGau=xBtn+wBtn+gap,    wGau=12*chpx;
+   int xPos=xGau+wGau+gap,    wPos=8*chpx;
+   int xAng=xPos+wPos,        wAng=8*chpx;
+   int xEst=xAng+wAng+gap/2,  wEst=11*chpx;
+   int xMtf=xEst+wEst+gap,    wCel=4*chpx;
    int colW=xMtf+4*wCel+pad;
-   int hHdr=rh+8;
-   int hTot=hHdr+rh+rh*8+rh+14;
+   int hHdr=rh+10;
+   int hTot=hHdr+rh+rh*8+rh+10;
 
    int cw=(int)ChartGetInteger(0,CHART_WIDTH_IN_PIXELS);
    int x=cw-InpPanelX-colW+6; if(x<6) x=6;
    int y=InpPanelY;
 
-   // ---- moldura + barra de titulo
-   Rect(PPFX+"bg",win,x,y,colW,hTot,BG,BORDA);
-   Rect(PPFX+"hdbar",win,x+1,y+1,colW-2,hHdr-2,InpNeon?C'14,18,28':C'38,38,46',
-        InpNeon?C'14,18,28':C'38,38,46');
-   Rect(PPFX+"hdline",win,x+1,y+hHdr-2,colW-2,2,ACC,ACC);
-   LblF(PPFX+"hd",win,x+pad,y+5,"CSS "+ShortToString(0x00B7)+" POR MOEDA",ACC,fs+1);
-   LblF(PPFX+"hd2",win,x+colW-pad-16*chpx,y+7,
-        StringFormat("%s  box %.2f  k%d",TfStr(gLineTF),InpBox,InpPesoK),TXT_DIM,fs-1);
+   Rect(PPFX+"bg",win,x,y,colW,hTot,BG,BORDA,0);
+   Rect(PPFX+"hdbar",win,x+1,y+1,colW-2,hHdr-3,InpNeon?C'14,18,28':C'38,38,46',
+        InpNeon?C'14,18,28':C'38,38,46',1);
+   Rect(PPFX+"hdline",win,x+1,y+hHdr-2,colW-2,2,ACC,ACC,2);
+   LblF(PPFX+"hd",win,x+pad,y+6,"CSS "+ShortToString(0x00B7)+" POR MOEDA",ACC,fs+1);
 
-   // ---- botao TODAS (limpa o solo)
-   int yB=y+hHdr+3;
-   BtnP(PPFX+"btnAll",win,x+pad,yB,wBtn+10,rh-6,
-        (gSolo<0)?"TODAS":"< TODAS",
-        (gSolo<0)?C'0,200,225':C'26,32,44', (gSolo<0)?C'8,12,18':TXT, fs-1);
-   LblF(PPFX+"chd0",win,x+xGau,yB+2,"FORCA",TXT_DIM,fs-2);
-   LblF(PPFX+"chd1",win,x+xPos,yB+2,"POS",TXT_DIM,fs-2);
-   LblF(PPFX+"chd2",win,x+xAng,yB+2,"ANG",TXT_DIM,fs-2);
-   LblF(PPFX+"chd3",win,x+xEst,yB+2,"ESTADO",TXT_DIM,fs-2);
+   // v2.39: TODAS foi para a BARRA DE TITULO (antes colidia com o cabecalho FORCA)
+   int wAll=8*chpx;
+   BtnP(PPFX+"btnAll",win,x+colW-pad-wAll,y+5,wAll,rh-8,"TODAS",
+        (gSolo<0)?C'26,32,44':C'0,200,225',(gSolo<0)?TXT_DIM:C'8,12,18',fs-2);
+   LblF(PPFX+"hd2",win,x+colW-pad-wAll-13*chpx,y+8,
+        StringFormat("%s  box %.2f",TfStr(gLineTF),InpBox),TXT_DIM,fs-2);
+
+   int yB=y+hHdr+2;
+   LblF(PPFX+"chdM",win,x+xBtn,yB+3,"MOEDA",TXT_DIM,fs-3);
+   LblF(PPFX+"chd0",win,x+xGau,yB+3,"FORCA",TXT_DIM,fs-3);
+   LblF(PPFX+"chd1",win,x+xPos,yB+3,"POS",TXT_DIM,fs-3);
+   LblF(PPFX+"chd2",win,x+xAng,yB+3,"ANG",TXT_DIM,fs-3);
+   LblF(PPFX+"chd3",win,x+xEst,yB+3,"ESTADO",TXT_DIM,fs-3);
    for(int j=0;j<4;j++)
-      LblF(PPFX+"chm"+(string)j,win,x+xMtf+j*wCel,yB+2,TfStr(mtf[j]),TXT_DIM,fs-2);
+      LblF(PPFX+"chm"+(string)j,win,x+xMtf+j*wCel,yB+3,TfStr(mtf[j]),TXT_DIM,fs-3);
 
    string up=ShortToString(0x25B2), dn=ShortToString(0x25BC), mid=ShortToString(0x00B7);
    int y0=yB+rh;
@@ -1068,51 +1094,46 @@ void DrawPanelMoeda()
       gRowCur[r]=c;
       int yy=y0+rh*r;
       double v=Vn[c], dAbs=MathAbs(Vn[c])-MathAbs(Vp[c]);
+      bool sat=(MathAbs(v)>lim);                    // a LINHA satura; o numero nao
       color cEstado; string est=EstadoStr(v,dAbs,cEstado);
       bool solo=(gSolo==c), off=gHide[c];
 
       color rowBg = solo ? (InpNeon?C'22,40,52':C'38,38,46') : ((r%2==0)?ROW_A:ROW_B);
       if(off && !solo) rowBg=C'14,15,19';
-      Rect(PPFX+"row"+(string)r,win,x+1,yy,colW-2,rh-1,rowBg,solo?ACC:rowBg);
-      // faixa de acento na cor da moeda
-      Rect(PPFX+"stp"+(string)r,win,x+2,yy+2,4,rh-5,
-           off?C'50,54,62':colArr[c], off?C'50,54,62':colArr[c]);
+      Rect(PPFX+"row"+(string)r,win,x+1,yy,colW-2,rh-1,rowBg,solo?ACC:rowBg,5);
+      Rect(PPFX+"stp"+(string)r,win,x+3,yy+3,4,rh-7,
+           off?C'50,54,62':colArr[c], off?C'50,54,62':colArr[c],6);
 
-      // botao da moeda (clique = isolar)
-      BtnP(PPFX+"btn"+(string)c,win,x+xBtn,yy+2,wBtn,rh-5,cur[c],
-           solo?C'0,150,175':C'24,29,40', off?C'80,86,96':colArr[c], fs);
+      BtnP(PPFX+"btn"+(string)c,win,x+xBtn,yy+3,wBtn,rh-7,cur[c],
+           solo?C'0,150,175':C'24,29,40', off?C'80,86,96':colArr[c], fs-1);
 
-      // medidor de forca
       int wfill=(int)MathRound(wGau*MathMin(MathAbs(v)/InpScaleMax,1.0));
       if(wfill<2) wfill=2;
       color barc = off?C'60,64,72' : ((v>=0)?C'60,220,150':C'240,110,110');
-      Rect(PPFX+"trk"+(string)r,win,x+xGau,yy+rh/2-4,wGau,7,TRACK,TRACK);
-      Rect(PPFX+"gau"+(string)r,win,x+xGau,yy+rh/2-4,wfill,7,barc,barc);
+      Rect(PPFX+"trk"+(string)r,win,x+xGau,yy+rh/2-4,wGau,7,TRACK,TRACK,6);
+      Rect(PPFX+"gau"+(string)r,win,x+xGau,yy+rh/2-4,wfill,7,barc,barc,7);
 
-      bool sat = (MathAbs(v) >= InpScaleMax-0.021);   // v2.38: no clamp
-      LblF(PPFX+"po"+(string)r,win,x+xPos,yy+5,
-           StringFormat("%+5.2f%s",v,sat?"*":" "),
-           off?C'80,86,96':TXT,fs);
-      LblF(PPFX+"an"+(string)r,win,x+xAng,yy+5,StringFormat("%+5.2f",dAbs),
-           off?C'80,86,96':((dAbs>0)?C'90,220,160':C'240,130,120'),fs);
+      LblF(PPFX+"po"+(string)r,win,x+xPos,yy+6,
+           StringFormat("%+6.2f%s",v,sat?"*":""), off?C'80,86,96':TXT,fs-1);
+      LblF(PPFX+"an"+(string)r,win,x+xAng,yy+6,StringFormat("%+6.2f",dAbs),
+           off?C'80,86,96':((dAbs>0)?C'90,220,160':C'240,130,120'),fs-1);
 
-      // ESTADO como chip
-      Rect(PPFX+"chip"+(string)r,win,x+xEst-3,yy+3,wEst,rh-7,
-           off?C'40,44,52':cEstado, off?C'40,44,52':cEstado);
-      LblF(PPFX+"es"+(string)r,win,x+xEst,yy+5,est,C'10,14,20',fs-2);
+      Rect(PPFX+"chip"+(string)r,win,x+xEst-4,yy+4,wEst,rh-9,
+           off?C'40,44,52':cEstado, off?C'40,44,52':cEstado,6);
+      LblF(PPFX+"es"+(string)r,win,x+xEst,yy+6,est,C'10,14,20',fs-3);
 
       for(int j=0;j<4;j++)
       {
          string a=(mdir[j][c]>0)?up:((mdir[j][c]<0)?dn:mid);
          color ac = off?C'80,86,96' : ((mdir[j][c]>0)?C'70,215,150':
                     ((mdir[j][c]<0)?C'240,120,110':C'90,100,116'));
-         LblF(PPFX+"m"+(string)r+"_"+(string)j,win,x+xMtf+j*wCel+wCel/3,yy+5,a,ac,fs-1);
+         LblF(PPFX+"m"+(string)r+"_"+(string)j,win,x+xMtf+j*wCel+wCel/4,yy+6,a,ac,fs-2);
       }
    }
 
-   LblF(PPFX+"lg",win,x+pad,y0+rh*8+4,
-        "* = no clamp "+ShortToString(0x00B7)+" leitura, nao sinal "+ShortToString(0x00B7)+
-        " pos(a12) e ang(a13) NULOS",TXT_DIM,fs-3);
+   LblF(PPFX+"lg",win,x+pad,y0+rh*8+3,
+        "* = linha no teto (valor real exibido) "+ShortToString(0x00B7)+
+        " leitura, nao sinal",TXT_DIM,fs-4);
 }
 //+------------------------------------------------------------------+
 void DrawPanel(const double &V1[],const double &V2[],const double &V3[],
