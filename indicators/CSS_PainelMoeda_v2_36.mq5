@@ -23,6 +23,14 @@
 //|      indicadores ficarem no MESMO grafico sem brigar.             |
 //|   Nada mais muda: calculo, buffers, linhas, matriz, replay.       |
 //|                                                                  |
+//|  v2.42 - ANG e o liquido de InpPesoK barras FECHADAS (k=3 default),|
+//|    nao da ultima barra, e IGNORA a barra em formacao (anti-repaint).|
+//|    Uma linha que despencou e acabou de virar mostra ANG negativa e   |
+//|    parece contradizer o grafico. Por isso: (a) o k voltou ao         |
+//|    cabecalho (sumiu por engano na v2.39) e (b) a coluna ANG ganhou   |
+//|    marca de VIRADA quando a ultima barra fechada anda CONTRA o       |
+//|    liquido de k.                                                     |
+//|                                                                  |
 //|  v2.41 - ANG e ESTADO medem COISAS DIFERENTES, de proposito:       |
 //|    ANG    = V(t) - V(t-k)          -> INCLINACAO da linha (sinal)  |
 //|    ESTADO = |V(t)| - |V(t-k)|      -> INTENSIDADE (cresce/encolhe) |
@@ -151,7 +159,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.41"
+#property version   "2.42"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -1026,6 +1034,13 @@ void DrawPanelMoeda()
    if(g1<1 || g2<1) return;
    double lim=InpScaleMax-0.02;      // onde a LINHA satura
 
+   // v2.42: inclinacao de UMA barra (shift 1 vs 2). Serve so para marcar
+   // VIRADA — quando a ultima barra fechada anda contra o liquido de k
+   // barras. Sem isso, uma linha que despencou e comecou a virar mostra ANG
+   // fortemente negativa e parece contradizer o grafico.
+   double V1b[8];
+   int g3=ComputeAtRaw(gLineTF,2,V1b);
+
    ENUM_TIMEFRAMES mtf[4]; mtf[0]=InpTF2; mtf[1]=InpTF3; mtf[2]=InpTF4; mtf[3]=InpTF5;
    int mdir[4][8];
    for(int j=0;j<4;j++)
@@ -1081,8 +1096,9 @@ void DrawPanelMoeda()
    int wAll=8*chpx;
    BtnP(PPFX+"btnAll",win,x+colW-pad-wAll,y+5,wAll,rh-8,"TODAS",
         (gSolo<0)?C'26,32,44':C'0,200,225',(gSolo<0)?TXT_DIM:C'8,12,18',fs-2);
-   LblF(PPFX+"hd2",win,x+colW-pad-wAll-13*chpx,y+8,
-        StringFormat("%s  box %.2f",TfStr(gLineTF),InpBox),TXT_DIM,fs-2);
+   LblF(PPFX+"hd2",win,x+colW-pad-wAll-16*chpx,y+8,
+        StringFormat("%s  box %.2f  ang:%db",TfStr(gLineTF),InpBox,InpPesoK),
+        TXT_DIM,fs-2);
 
    int yB=y+hHdr+2;
    LblF(PPFX+"chdM",win,x+xBtn,yB+3,"MOEDA",TXT_DIM,fs-3);
@@ -1136,8 +1152,14 @@ void DrawPanelMoeda()
 
       LblF(PPFX+"po"+(string)r,win,x+xPos,yy+6,
            StringFormat("%+6.2f%s",v,sat?"*":""), off?C'80,86,96':TXT,fs-1);
+      double d1 = (g3>=1)? (Vn[c]-V1b[c]) : 0.0;      // ultima barra fechada
+      bool virou = (g3>=1) && (dV*d1 < 0);            // ultima barra contra o k
       LblF(PPFX+"an"+(string)r,win,x+xAng,yy+6,StringFormat("%+6.2f",dV),
            off?C'80,86,96':((dV>0)?C'90,220,160':C'240,130,120'),fs-1);
+      // v2.42: marca de VIRADA — a ultima barra anda contra o liquido de k
+      LblF(PPFX+"vr"+(string)r,win,x+xAng+6*chpx,yy+6,
+           virou? ((d1>0)?ShortToString(0x21B1):ShortToString(0x21B3)) : " ",
+           off?C'80,86,96':C'255,205,80', fs-2);
       LblF(PPFX+"es"+(string)r,win,x+xEst,yy+6,est,C'10,14,20',fs-3);
 
       for(int j=0;j<4;j++)
@@ -1155,9 +1177,10 @@ void DrawPanelMoeda()
    }
 
    LblF(PPFX+"lg",win,x+pad,y0+rh*8+3,
-        "ANG = inclinacao da linha "+ShortToString(0x00B7)+
-        " ESTADO = intensidade "+ShortToString(0x00B7)+
-        " * = linha no teto "+ShortToString(0x00B7)+" leitura, nao sinal",TXT_DIM,fs-4);
+        StringFormat("ANG = inclinacao em %d barras fechadas",InpPesoK)+"  "+
+        ShortToString(0x21B1)+" virada na ultima  "+
+        "*  = linha no teto  ·  leitura, nao sinal",
+        TXT_DIM,fs-4);
 }
 //+------------------------------------------------------------------+
 void DrawPanel(const double &V1[],const double &V2[],const double &V3[],
