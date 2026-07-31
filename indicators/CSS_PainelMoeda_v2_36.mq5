@@ -143,7 +143,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.39"
+#property version   "2.40"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -726,7 +726,7 @@ void LblF(string nm,int win,int x,int y,string txt,color cl,int fs,string fnt="C
    ObjectSetInteger(0,nm,OBJPROP_FONTSIZE,fs);
    ObjectSetInteger(0,nm,OBJPROP_COLOR,cl);
    ObjectSetInteger(0,nm,OBJPROP_BACK,false);
-   ObjectSetInteger(0,nm,OBJPROP_ZORDER,30);      // v2.39: texto acima dos retangulos
+   ObjectSetInteger(0,nm,OBJPROP_ZORDER,30);      // v2.39: prioridade de clique
    ObjectSetInteger(0,nm,OBJPROP_SELECTABLE,false);
 }
 // v2.37: botao do painel novo (moeda / TODAS)
@@ -747,7 +747,7 @@ void BtnP(string nm,int win,int x,int y,int w,int h,string txt,
    ObjectSetInteger(0,nm,OBJPROP_BORDER_COLOR,bg);
    ObjectSetInteger(0,nm,OBJPROP_STATE,false);
    ObjectSetInteger(0,nm,OBJPROP_BACK,false);
-   ObjectSetInteger(0,nm,OBJPROP_ZORDER,50);        // v2.39: botao no topo
+   ObjectSetInteger(0,nm,OBJPROP_ZORDER,50);        // v2.39: prioridade de clique (o topo VISUAL vem da ordem de criacao)
 }
 // v2.33: borda parametrizavel (default = comportamento v2.32). Celulas
 // internas passam borda = fundo (visual chapado, estilo CSSM).
@@ -1088,38 +1088,46 @@ void DrawPanelMoeda()
    string up=ShortToString(0x25B2), dn=ShortToString(0x25BC), mid=ShortToString(0x00B7);
    int y0=yB+rh;
 
+   // v2.40 — DUAS PASSADAS. No MQL5 o empilhamento visual segue a ORDEM DE
+   // CRIACAO dos objetos (OBJPROP_ZORDER e prioridade de CLIQUE, nao de
+   // desenho). Desenhando fundo+conteudo linha a linha, o botao da linha 0
+   // nascia ANTES do retangulo da linha 1 — e quando a ordenacao mudava
+   // (troca de TF) aquela moeda migrava para baixo de um retangulo criado
+   // depois e SUMIA. Agora: todos os fundos primeiro, todo o conteudo depois.
    for(int r=0;r<8;r++)
    {
       int c=ord[r];
       gRowCur[r]=c;
       int yy=y0+rh*r;
-      double v=Vn[c], dAbs=MathAbs(Vn[c])-MathAbs(Vp[c]);
-      bool sat=(MathAbs(v)>lim);                    // a LINHA satura; o numero nao
-      color cEstado; string est=EstadoStr(v,dAbs,cEstado);
       bool solo=(gSolo==c), off=gHide[c];
-
       color rowBg = solo ? (InpNeon?C'22,40,52':C'38,38,46') : ((r%2==0)?ROW_A:ROW_B);
       if(off && !solo) rowBg=C'14,15,19';
       Rect(PPFX+"row"+(string)r,win,x+1,yy,colW-2,rh-1,rowBg,solo?ACC:rowBg,5);
       Rect(PPFX+"stp"+(string)r,win,x+3,yy+3,4,rh-7,
            off?C'50,54,62':colArr[c], off?C'50,54,62':colArr[c],6);
+      Rect(PPFX+"trk"+(string)r,win,x+xGau,yy+rh/2-4,wGau,7,TRACK,TRACK,6);
+   }
 
-      BtnP(PPFX+"btn"+(string)c,win,x+xBtn,yy+3,wBtn,rh-7,cur[c],
-           solo?C'0,150,175':C'24,29,40', off?C'80,86,96':colArr[c], fs-1);
+   for(int r=0;r<8;r++)
+   {
+      int c=ord[r];
+      int yy=y0+rh*r;
+      double v=Vn[c], dAbs=MathAbs(Vn[c])-MathAbs(Vp[c]);
+      bool sat=(MathAbs(v)>lim);
+      color cEstado; string est=EstadoStr(v,dAbs,cEstado);
+      bool solo=(gSolo==c), off=gHide[c];
 
       int wfill=(int)MathRound(wGau*MathMin(MathAbs(v)/InpScaleMax,1.0));
       if(wfill<2) wfill=2;
       color barc = off?C'60,64,72' : ((v>=0)?C'60,220,150':C'240,110,110');
-      Rect(PPFX+"trk"+(string)r,win,x+xGau,yy+rh/2-4,wGau,7,TRACK,TRACK,6);
       Rect(PPFX+"gau"+(string)r,win,x+xGau,yy+rh/2-4,wfill,7,barc,barc,7);
+      Rect(PPFX+"chip"+(string)r,win,x+xEst-4,yy+4,wEst,rh-9,
+           off?C'40,44,52':cEstado, off?C'40,44,52':cEstado,6);
 
       LblF(PPFX+"po"+(string)r,win,x+xPos,yy+6,
            StringFormat("%+6.2f%s",v,sat?"*":""), off?C'80,86,96':TXT,fs-1);
       LblF(PPFX+"an"+(string)r,win,x+xAng,yy+6,StringFormat("%+6.2f",dAbs),
            off?C'80,86,96':((dAbs>0)?C'90,220,160':C'240,130,120'),fs-1);
-
-      Rect(PPFX+"chip"+(string)r,win,x+xEst-4,yy+4,wEst,rh-9,
-           off?C'40,44,52':cEstado, off?C'40,44,52':cEstado,6);
       LblF(PPFX+"es"+(string)r,win,x+xEst,yy+6,est,C'10,14,20',fs-3);
 
       for(int j=0;j<4;j++)
@@ -1129,6 +1137,11 @@ void DrawPanelMoeda()
                     ((mdir[j][c]<0)?C'240,120,110':C'90,100,116'));
          LblF(PPFX+"m"+(string)r+"_"+(string)j,win,x+xMtf+j*wCel+wCel/4,yy+6,a,ac,fs-2);
       }
+
+      // botao por ULTIMO: nasce depois de todo retangulo, entao fica sempre
+      // por cima, qualquer que seja a ordenacao
+      BtnP(PPFX+"btn"+(string)c,win,x+xBtn,yy+3,wBtn,rh-7,cur[c],
+           solo?C'0,150,175':C'24,29,40', off?C'80,86,96':colArr[c], fs-1);
    }
 
    LblF(PPFX+"lg",win,x+pad,y0+rh*8+3,
