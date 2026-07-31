@@ -23,6 +23,14 @@
 //|      indicadores ficarem no MESMO grafico sem brigar.             |
 //|   Nada mais muda: calculo, buffers, linhas, matriz, replay.       |
 //|                                                                  |
+//|  v2.41 - ANG e ESTADO medem COISAS DIFERENTES, de proposito:       |
+//|    ANG    = V(t) - V(t-k)          -> INCLINACAO da linha (sinal)  |
+//|    ESTADO = |V(t)| - |V(t-k)|      -> INTENSIDADE (cresce/encolhe) |
+//|  Uma moeda fraca voltando ao zero tem a linha SUBINDO (ang > 0) e  |
+//|  a intensidade ENCOLHENDO (exaustao). Antes a coluna ANG mostrava  |
+//|  a intensidade e contradizia o que o olho via no grafico.          |
+//|  As setas MTF tambem sao inclinacao (v2.41).                       |
+//|                                                                  |
 //|  ESTADO por MAGNITUDE (nao-direcional; vale p/ forte e p/ fraca): |
 //|    |V|>=box e d|V|>0  -> EXPANSAO   (movimento ampliando)        |
 //|    |V|>=box e d|V|<=0 -> EXAUSTAO   (fora da box, encolhendo)    |
@@ -143,7 +151,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.40"
+#property version   "2.41"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -1026,7 +1034,7 @@ void DrawPanelMoeda()
       int ga=ComputeAtRaw(mtf[j],1,A), gb=ComputeAtRaw(mtf[j],1+InpPesoK,B);
       for(int c=0;c<8;c++)
       {
-         double d=(ga<1||gb<1)? 0.0 : (MathAbs(A[c])-MathAbs(B[c]));
+         double d=(ga<1||gb<1)? 0.0 : (A[c]-B[c]);   // v2.41: inclinacao, com sinal
          mdir[j][c]=(d>0)?1:((d<0)?-1:0);
       }
    }
@@ -1112,7 +1120,9 @@ void DrawPanelMoeda()
    {
       int c=ord[r];
       int yy=y0+rh*r;
-      double v=Vn[c], dAbs=MathAbs(Vn[c])-MathAbs(Vp[c]);
+      double v=Vn[c];
+      double dV   = Vn[c]-Vp[c];                       // v2.41: INCLINACAO da linha
+      double dAbs = MathAbs(Vn[c])-MathAbs(Vp[c]);     // intensidade (alimenta o ESTADO)
       bool sat=(MathAbs(v)>lim);
       color cEstado; string est=EstadoStr(v,dAbs,cEstado);
       bool solo=(gSolo==c), off=gHide[c];
@@ -1126,8 +1136,8 @@ void DrawPanelMoeda()
 
       LblF(PPFX+"po"+(string)r,win,x+xPos,yy+6,
            StringFormat("%+6.2f%s",v,sat?"*":""), off?C'80,86,96':TXT,fs-1);
-      LblF(PPFX+"an"+(string)r,win,x+xAng,yy+6,StringFormat("%+6.2f",dAbs),
-           off?C'80,86,96':((dAbs>0)?C'90,220,160':C'240,130,120'),fs-1);
+      LblF(PPFX+"an"+(string)r,win,x+xAng,yy+6,StringFormat("%+6.2f",dV),
+           off?C'80,86,96':((dV>0)?C'90,220,160':C'240,130,120'),fs-1);
       LblF(PPFX+"es"+(string)r,win,x+xEst,yy+6,est,C'10,14,20',fs-3);
 
       for(int j=0;j<4;j++)
@@ -1145,8 +1155,9 @@ void DrawPanelMoeda()
    }
 
    LblF(PPFX+"lg",win,x+pad,y0+rh*8+3,
-        "* = linha no teto (valor real exibido) "+ShortToString(0x00B7)+
-        " leitura, nao sinal",TXT_DIM,fs-4);
+        "ANG = inclinacao da linha "+ShortToString(0x00B7)+
+        " ESTADO = intensidade "+ShortToString(0x00B7)+
+        " * = linha no teto "+ShortToString(0x00B7)+" leitura, nao sinal",TXT_DIM,fs-4);
 }
 //+------------------------------------------------------------------+
 void DrawPanel(const double &V1[],const double &V2[],const double &V3[],
