@@ -159,7 +159,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.42"
+#property version   "2.43"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -1075,7 +1075,7 @@ void DrawPanelMoeda()
    int xBtn=pad,              wBtn=7*chpx;
    int xGau=xBtn+wBtn+gap,    wGau=12*chpx;
    int xPos=xGau+wGau+gap,    wPos=8*chpx;
-   int xAng=xPos+wPos,        wAng=8*chpx;
+   int xAng=xPos+wPos,        wAng=9*chpx;   // v2.43: +1 char p/ a marca
    int xEst=xAng+wAng+gap/2,  wEst=11*chpx;
    int xMtf=xEst+wEst+gap,    wCel=4*chpx;
    int colW=xMtf+4*wCel+pad;
@@ -1096,8 +1096,9 @@ void DrawPanelMoeda()
    int wAll=8*chpx;
    BtnP(PPFX+"btnAll",win,x+colW-pad-wAll,y+5,wAll,rh-8,"TODAS",
         (gSolo<0)?C'26,32,44':C'0,200,225',(gSolo<0)?TXT_DIM:C'8,12,18',fs-2);
-   LblF(PPFX+"hd2",win,x+colW-pad-wAll-16*chpx,y+8,
-        StringFormat("%s  box %.2f  ang:%db",TfStr(gLineTF),InpBox,InpPesoK),
+   // v2.43: 14 chars no maximo ("H1 box.20 k3"), com folga real ate o TODAS
+   LblF(PPFX+"hd2",win,x+colW-pad-wAll-15*chpx,y+8,
+        StringFormat("%s box%.2f k%d",TfStr(gLineTF),InpBox,InpPesoK),
         TXT_DIM,fs-2);
 
    int yB=y+hHdr+2;
@@ -1157,8 +1158,11 @@ void DrawPanelMoeda()
       LblF(PPFX+"an"+(string)r,win,x+xAng,yy+6,StringFormat("%+6.2f",dV),
            off?C'80,86,96':((dV>0)?C'90,220,160':C'240,130,120'),fs-1);
       // v2.42: marca de VIRADA — a ultima barra anda contra o liquido de k
-      LblF(PPFX+"vr"+(string)r,win,x+xAng+6*chpx,yy+6,
-           virou? ((d1>0)?ShortToString(0x21B1):ShortToString(0x21B3)) : " ",
+      // v2.43: 0x21B1/0x21B3 nao existem na Consolas e saiam como quadrado.
+      // Usa os mesmos triangulos do MTF (comprovadamente renderizam), em ambar
+      // para nao se confundir com as setas de contexto.
+      LblF(PPFX+"vr"+(string)r,win,x+xAng+7*chpx,yy+6,
+           virou? ((d1>0)?up:dn) : " ",
            off?C'80,86,96':C'255,205,80', fs-2);
       LblF(PPFX+"es"+(string)r,win,x+xEst,yy+6,est,C'10,14,20',fs-3);
 
@@ -1177,9 +1181,9 @@ void DrawPanelMoeda()
    }
 
    LblF(PPFX+"lg",win,x+pad,y0+rh*8+3,
-        StringFormat("ANG = inclinacao em %d barras fechadas",InpPesoK)+"  "+
-        ShortToString(0x21B1)+" virada na ultima  "+
-        "*  = linha no teto  ·  leitura, nao sinal",
+        StringFormat("ANG = inclinacao em %d barras fechadas",InpPesoK)+"   "+
+        ShortToString(0x25B2)+ShortToString(0x25BC)+" = virou na ultima   "+
+        "* = linha no teto   leitura, nao sinal",
         TXT_DIM,fs-4);
 }
 //+------------------------------------------------------------------+
