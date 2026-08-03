@@ -23,6 +23,14 @@
 //|      indicadores ficarem no MESMO grafico sem brigar.             |
 //|   Nada mais muda: calculo, buffers, linhas, matriz, replay.       |
 //|                                                                  |
+//|  v2.44 - InpAngViva (default TRUE): ANG e ESTADO passam a ler da    |
+//|    barra EM FORMACAO, para bater com a linha que aparece na tela.   |
+//|    O preco disso e honesto e esta declarado: o numero REPINTA a     |
+//|    cada tick. InpAngViva=false volta ao anti-repaint (barra fechada)|
+//|    e ai a marca de virada volta a aparecer. ANG e ESTADO leem       |
+//|    sempre do MESMO ponto — misturar os dois foi o que gerou as      |
+//|    contradicoes aparentes das versoes anteriores.                   |
+//|                                                                  |
 //|  v2.42 - ANG e o liquido de InpPesoK barras FECHADAS (k=3 default),|
 //|    nao da ultima barra, e IGNORA a barra em formacao (anti-repaint).|
 //|    Uma linha que despencou e acabou de virar mostra ANG negativa e   |
@@ -159,7 +167,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.43"
+#property version   "2.44"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -241,6 +249,9 @@ enum EModoPainel { MP_TF=0, MP_MOEDA=1 };
 input EModoPainel InpPainelModo = MP_MOEDA; // painel: MOEDA-maior (novo) ou TF-maior
 input int    InpFontPainel = 13;   // v2.37: fonte do painel por moeda (maior)
 input bool   InpNeon       = true; // v2.37: visual futurista (acento neon)
+// v2.44: ANG/ESTADO a partir da barra EM FORMACAO (bate com a linha que voce ve
+// na tela, mas REPINTA a cada tick) ou da ultima FECHADA (nao repinta).
+input bool   InpAngViva    = true;  // ANG/ESTADO usam a barra viva (repinta)
 input double InpDiffThr  = 0.0;  // distancia minima de forca (regra de ouro)
 input bool   InpAddSunday= true; // somar candle de domingo na segunda
 input int    InpPesoK    = 3;    // k (barras fechadas do TF) p/ dpeso — pre-registro a13
@@ -1028,9 +1039,13 @@ void DrawPanelMoeda()
    int win=ChartWindowFind(); if(win<0) return;
 
    // v2.39: valores SEM clamp (o painel mostra o real; a linha e que e clampada)
+   // v2.44: sh=0 -> barra em formacao (o que a linha mostra AGORA, repinta);
+   // sh=1 -> ultima fechada (anti-repaint). ANG e ESTADO leem do MESMO ponto,
+   // senao voltam a se contradizer.
+   int sh = InpAngViva ? 0 : 1;
    double Vn[8], Vp[8];
-   int g1=ComputeAtRaw(gLineTF,1,Vn);
-   int g2=ComputeAtRaw(gLineTF,1+InpPesoK,Vp);
+   int g1=ComputeAtRaw(gLineTF,sh,Vn);
+   int g2=ComputeAtRaw(gLineTF,sh+InpPesoK,Vp);
    if(g1<1 || g2<1) return;
    double lim=InpScaleMax-0.02;      // onde a LINHA satura
 
@@ -1039,14 +1054,14 @@ void DrawPanelMoeda()
    // barras. Sem isso, uma linha que despencou e comecou a virar mostra ANG
    // fortemente negativa e parece contradizer o grafico.
    double V1b[8];
-   int g3=ComputeAtRaw(gLineTF,2,V1b);
+   int g3 = InpAngViva ? 0 : ComputeAtRaw(gLineTF,2,V1b);   // v2.44
 
    ENUM_TIMEFRAMES mtf[4]; mtf[0]=InpTF2; mtf[1]=InpTF3; mtf[2]=InpTF4; mtf[3]=InpTF5;
    int mdir[4][8];
    for(int j=0;j<4;j++)
    {
       double A[8], B[8];
-      int ga=ComputeAtRaw(mtf[j],1,A), gb=ComputeAtRaw(mtf[j],1+InpPesoK,B);
+      int ga=ComputeAtRaw(mtf[j],sh,A), gb=ComputeAtRaw(mtf[j],sh+InpPesoK,B);
       for(int c=0;c<8;c++)
       {
          double d=(ga<1||gb<1)? 0.0 : (A[c]-B[c]);   // v2.41: inclinacao, com sinal
@@ -1097,9 +1112,10 @@ void DrawPanelMoeda()
    BtnP(PPFX+"btnAll",win,x+colW-pad-wAll,y+5,wAll,rh-8,"TODAS",
         (gSolo<0)?C'26,32,44':C'0,200,225',(gSolo<0)?TXT_DIM:C'8,12,18',fs-2);
    // v2.43: 14 chars no maximo ("H1 box.20 k3"), com folga real ate o TODAS
-   LblF(PPFX+"hd2",win,x+colW-pad-wAll-15*chpx,y+8,
-        StringFormat("%s box%.2f k%d",TfStr(gLineTF),InpBox,InpPesoK),
-        TXT_DIM,fs-2);
+   LblF(PPFX+"hd2",win,x+colW-pad-wAll-19*chpx,y+8,
+        StringFormat("%s box%.2f k%d %s",TfStr(gLineTF),InpBox,InpPesoK,
+                     InpAngViva?"vivo":"fech"),
+        InpAngViva?C'255,205,80':TXT_DIM,fs-2);
 
    int yB=y+hHdr+2;
    LblF(PPFX+"chdM",win,x+xBtn,yB+3,"MOEDA",TXT_DIM,fs-3);
@@ -1181,8 +1197,10 @@ void DrawPanelMoeda()
    }
 
    LblF(PPFX+"lg",win,x+pad,y0+rh*8+3,
-        StringFormat("ANG = inclinacao em %d barras fechadas",InpPesoK)+"   "+
-        ShortToString(0x25B2)+ShortToString(0x25BC)+" = virou na ultima   "+
+        StringFormat("ANG = inclinacao em %d barras",InpPesoK)+
+        (InpAngViva? " ate a barra VIVA (repinta)   "
+                   : " fechadas   ")+
+        (InpAngViva? "" : ShortToString(0x25B2)+ShortToString(0x25BC)+" = virou na ultima   ")+
         "* = linha no teto   leitura, nao sinal",
         TXT_DIM,fs-4);
 }
