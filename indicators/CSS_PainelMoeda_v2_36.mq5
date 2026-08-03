@@ -167,7 +167,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.44"
+#property version   "2.45"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -1106,16 +1106,19 @@ void DrawPanelMoeda()
         InpNeon?C'14,18,28':C'38,38,46',1);
    Rect(PPFX+"hdline",win,x+1,y+hHdr-2,colW-2,2,ACC,ACC,2);
    LblF(PPFX+"hd",win,x+pad,y+6,"CSS "+ShortToString(0x00B7)+" POR MOEDA",ACC,fs+1);
+   // v2.45: a info do modo vai para a ESQUERDA, logo apos o titulo. Antes
+   // disputava a mesma ponta com o botao TODAS e encostava nele.
+   LblF(PPFX+"hd2",win,x+pad+20*chpx,y+8,
+        StringFormat("%s box%.2f k%d %s",TfStr(gLineTF),InpBox,InpPesoK,
+                     InpAngViva?"vivo":"fech"),
+        InpAngViva?C'255,205,80':TXT_DIM,fs-2);
 
    // v2.39: TODAS foi para a BARRA DE TITULO (antes colidia com o cabecalho FORCA)
    int wAll=8*chpx;
    BtnP(PPFX+"btnAll",win,x+colW-pad-wAll,y+5,wAll,rh-8,"TODAS",
         (gSolo<0)?C'26,32,44':C'0,200,225',(gSolo<0)?TXT_DIM:C'8,12,18',fs-2);
    // v2.43: 14 chars no maximo ("H1 box.20 k3"), com folga real ate o TODAS
-   LblF(PPFX+"hd2",win,x+colW-pad-wAll-19*chpx,y+8,
-        StringFormat("%s box%.2f k%d %s",TfStr(gLineTF),InpBox,InpPesoK,
-                     InpAngViva?"vivo":"fech"),
-        InpAngViva?C'255,205,80':TXT_DIM,fs-2);
+
 
    int yB=y+hHdr+2;
    LblF(PPFX+"chdM",win,x+xBtn,yB+3,"MOEDA",TXT_DIM,fs-3);
@@ -1197,11 +1200,10 @@ void DrawPanelMoeda()
    }
 
    LblF(PPFX+"lg",win,x+pad,y0+rh*8+3,
-        StringFormat("ANG = inclinacao em %d barras",InpPesoK)+
-        (InpAngViva? " ate a barra VIVA (repinta)   "
-                   : " fechadas   ")+
-        (InpAngViva? "" : ShortToString(0x25B2)+ShortToString(0x25BC)+" = virou na ultima   ")+
-        "* = linha no teto   leitura, nao sinal",
+        StringFormat("ANG: %d barras",InpPesoK)+
+        (InpAngViva? " ate a viva (repinta)" : " fechadas")+
+        (InpAngViva? "" : "  "+ShortToString(0x25B2)+ShortToString(0x25BC)+"=virou")+
+        "   * = no teto   leitura, nao sinal",
         TXT_DIM,fs-4);
 }
 //+------------------------------------------------------------------+
