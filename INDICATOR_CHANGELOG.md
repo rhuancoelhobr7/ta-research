@@ -1,5 +1,80 @@
 # CSSM_Contexto — changelog do indicador
 
+## v1.45 (2026-08-12) — modo REPLAY (inspeção do passado)
+
+**Motivação direta** (pedido do usuário): poder olhar o painel como ele estava
+em qualquer barra fechada do histórico, sem depender do Testador.
+
+Botões `<<  <  >  >>  [AO VIVO]` ao lado do MTX. `<<` e `<` andam para trás no
+tempo, `>` e `>>` voltam, e o botão do meio zera. Passo dos botões duplos no
+input `InpReplayStep` (default 10). Marcador pontilhado laranja no gráfico na
+barra lida, e um rótulo com o horário dela.
+
+### O que o replay move
+Painel, rótulos de ponta, matriz 8×8, idade do estado, setas de aceleração
+**e as próprias linhas plotadas**. Tudo lê `gRK` barras fechadas atrás.
+
+**Correção da 1ª tentativa desta versão:** os buffers ficavam ao vivo, para não
+contaminar consumidores via `iCustom`. Estava errado para o uso: as linhas
+continuavam desenhando até o presente e o **futuro em relação à barra do
+replay ficava visível** — que é justamente o que um replay tem de esconder.
+Agora as barras mais novas que a barra exibida vão para `EMPTY_VALUE`: a linha
+termina no replay e os rótulos de ponta acompanham essa ponta em vez da borda
+direita do gráfico. `RpStep` reescreve os buffers a cada clique.
+
+**Consequência assumida:** um consumidor que compartilhe *esta instância* lê
+`EMPTY_VALUE` nas barras escondidas e mostra "—". É o comportamento honesto —
+melhor "não sei" do que servir dado do futuro. Na prática o `IFM.mq5` v1.3
+abre a sua própria instância via `iCustom` com os inputs default; só coincide
+com a do gráfico se símbolo, TF **e** todos os inputs forem iguais.
+
+### O que o replay NÃO move
+**Os alertas.** Disparar alerta de um evento do passado seria mentira — eles
+continuam olhando o índice 0.
+
+### Isto não é um backtest
+É uma **lente**, não uma régua: mostra o passado sem detecção, latência,
+captura restante, precisão, calibração a iso-ruído ou pré-registro. Olhar
+histórico garimpado no olho é exatamente o modo de se enganar que o
+`FALHAS.md` cataloga. Medição continua sendo no motor Python vendorado
+(`cssm_engine.py`, com gate de paridade) dentro do arcabouço de pesquisa.
+
+### Segurança
+`RK()` sempre devolve índice dentro das séries calculadas — o `gRK` persiste
+entre recálculos e as séries encolhem quando o histórico é curto. `OnDeinit`
+já limpava tudo por prefixo `PFX`, o que cobre os botões e a linha vertical.
+
+## v1.44 (2026-08-12) — ER exposto em buffer (40–47), somente exportação
+
+O `ER` era calculado desde a v1.30 (o `M` depende dele) e exibido no painel
+desde a v1.42, mas era o **único ingrediente do `M` sem saída por buffer** —
+ou seja, invisível para qualquer consumidor via `iCustom`. Os buffers 40–47
+passam a expô-lo por moeda, na mesma ordem dos demais
+(`USD,EUR,GBP,JPY,CHF,CAD,AUD,NZD`).
+
+**Motivação:** o `IFM.mq5` v1.3 do `ifm-lab` passa a mostrar as colunas `M` e
+`er` no painel MÉTRICAS, lendo deste indicador. Ler daqui em vez de
+recalcular lá preserva a identidade do objeto medido pelo b1 e pelo B14.
+
+### O que mudou
+- `#property indicator_buffers` 40 → **48**.
+- Arrays `BE0..BE7` + `SetIndexBuffer(40..47, INDICATOR_CALCULATIONS)`.
+- `SetER(c, idx, v)` no mesmo molde de `SetM`/`SetSD`/`SetBr`, chamado nos
+  mesmos quatro pontos: limpeza, laço principal, barra em formação e o
+  refresh cosmético da barra viva.
+
+### O que NÃO mudou
+**Zero alteração de cálculo, de gate, de plot ou dos buffers 0–39.** Nenhum
+consumidor existente é afetado. O ER continua sendo o mesmo
+`EffRatio(c, k, gWMid)` de sempre — a mudança é só de exportação.
+
+### Lembrete de leitura (inalterado desde a v1.42)
+O `M` **já contém** o ER: `M = sinal(t) × min(|t|/2, 1) × ER`. As duas saídas
+não são independentes — o ER é o fator de qualidade **dentro** do M. E o ER
+tem dois papéis: como **portão** (~0,25 com o zS ligado) marca o cruzamento
+que merece atenção; como **gradiente** dentro do movimento, **ER alto = pouca
+captura restante** (b1: rho −0,51) — não é "entre agora", é "já andou".
+
 ## v1.43 (2026-07-28) — layout escalado pelo DPI (corrige sobreposição)
 
 **Bug ANTERIOR à v1.42, corrigido agora.** O painel estimava a largura de um

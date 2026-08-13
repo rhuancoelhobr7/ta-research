@@ -86,17 +86,50 @@
 //|  testou continuação pós-reconhecimento: NULA). O aviso           |
 //|  "contexto, nao e sinal de entrada" cobre também a camada nova.  |
 //|                                                                  |
+//|                                                                  |
+//|  v1.44 (ER exposto em buffer — SOMENTE EXPORTAÇÃO):              |
+//|   - MOTIVACAO: o ER ja era calculado desde a v1.30 e exibido no  |
+//|     painel desde a v1.42, mas era o unico ingrediente do M sem   |
+//|     saida por buffer — logo, invisivel para consumidores via     |
+//|     iCustom. Buffers 40-47 passam a expo-lo por moeda.           |
+//|   - ZERO alteracao de calculo, de gate, de plot ou dos buffers   |
+//|     0-39. Consumidores existentes nao sao afetados.              |
+//|   - LEMBRETE de leitura (v1.42, inalterado): o M JA CONTEM o ER  |
+//|     (M = sinal(t) * min(|t|/2,1) * ER). As duas colunas nao sao  |
+//|     independentes — o ER e o fator de qualidade DENTRO do M.     |
+//|   - Papeis do ER: PORTAO (~0.25 com zS ligado) marca cruzamento  |
+//|     que merece atencao; GRADIENTE dentro do movimento, ER alto = |
+//|     POUCA captura restante (b1: rho -0.51) — "ja andou".         |
+//|   - STATUS: EXPLORATORIO (P2 congelado). Numero cru, sem gatilho.|
+//|                                                                  |
+//|                                                                  |
+//|  v1.45 (modo REPLAY — INSPEÇÃO, nao backtest):                   |
+//|   - Botoes << < > >> e [AO VIVO] deslocam a barra que o PAINEL   |
+//|     le (gRK barras fechadas atras). Marcador pontilhado laranja  |
+//|     no grafico + rotulo com o horario da barra.                  |
+//|   - MOVE: painel, rotulos de ponta, matriz 8x8, idade do estado  |
+//|     e setas de aceleracao.                                       |
+//|   - NAO MOVE, de proposito: os ALERTAS (alerta do passado seria  |
+//|     mentira) e os BUFFERS 0-47 do iCustom (o IFM e qualquer      |
+//|     outro consumidor continuam recebendo o valor AO VIVO — um    |
+//|     grafico em replay nao pode contaminar quem le daqui sem      |
+//|     saber). O rotulo do replay diz isso na tela.                 |
+//|   - Isto NAO e um backtest. E uma lente para olhar o passado sem |
+//|     regua. Medicao com regua e pre-registro roda no motor Python |
+//|     vendorado (`cssm_engine.py`), nao aqui.                      |
+//|                                                                  |
 //|  Buffers p/ iCustom:                                             |
 //|   0-7  M por moeda | 8-15 estado (0-3) | 16-23 direção (+1/-1)   |
 //|   24-31 breadth_hard*dir (assinado) | 32-39 breadth_soft*dir     |
+//|   40-47 ER por moeda (v1.44; 0..1, sem sinal)                    |
 //|  Ordem: USD,EUR,GBP,JPY,CHF,CAD,AUD,NZD. Ler com shift>=1.       |
 //|  Barra em formação (shift 0) = cópia cosmética da última fechada.|
 //+------------------------------------------------------------------+
 #property copyright "Carlos — motor CSSM (validado por estudo de evento)"
-#property version   "1.43"
+#property version   "1.45"
 #property description "+ janelas por horizonte temporal (WM_HOURS) + camada relacional (matriz 8x8, breadth)"
 #property indicator_separate_window
-#property indicator_buffers 40
+#property indicator_buffers 48
 #property indicator_plots   8
 
 #property indicator_type1  DRAW_LINE
@@ -175,6 +208,8 @@ input ENUM_TIMEFRAMES InpGT6 = PERIOD_MN1;     // MTF 6
 // v1.42 — input NOVO e no FIM de propósito: iCustom posicional de EAs antigos
 // continua válido (parâmetros omitidos assumem o default).
 input bool   InpShowER = true;   // coluna "er" no painel (observação — ver P2)
+input bool   InpReplay = true;   // v1.45: botões de REPLAY (inspeção do passado)
+input int    InpReplayStep = 10; // passo dos botões duplos (barras)
 
 //--- moedas e cores
 string cur[8]    = {"USD","EUR","GBP","JPY","CHF","CAD","AUD","NZD"};
@@ -196,6 +231,7 @@ double BS0[],BS1[],BS2[],BS3[],BS4[],BS5[],BS6[],BS7[];
 double BD0[],BD1[],BD2[],BD3[],BD4[],BD5[],BD6[],BD7[];
 double BH0[],BH1[],BH2[],BH3[],BH4[],BH5[],BH6[],BH7[];   // 24-31 breadth_hard*dir
 double BB0[],BB1[],BB2[],BB3[],BB4[],BB5[],BB6[],BB7[];   // 32-39 breadth_soft*dir
+double BE0[],BE1[],BE2[],BE3[],BE4[],BE5[],BE6[],BE7[];   // 40-47 ER por moeda (v1.44)
 
 //--- pares
 string gPair[];
@@ -208,7 +244,25 @@ double gIdx[];
 double gTmid[], gER[], gMomF[], gMomM[], gPers[], gConv[], gAcc[], gM[];
 int    gStateSer[];   // estados históricos (8 * gLs)
 int    gDirSer[];     // direções históricas (8 * gLs)
-double gAccZ0[8];     // z da aceleração em k=0 (setas)
+double gAccZ0[8];     // z da aceleração na barra exibida (setas) — ver gRK
+
+//--- v1.45: REPLAY. gRK = quantas barras FECHADAS atrás o PAINEL está lendo
+//    (0 = ao vivo). É uma ferramenta de INSPEÇÃO: move apenas a leitura de
+//    tela (painel, rótulos de ponta, matriz, idade e setas). NÃO move:
+//      - os ALERTAS (disparar alerta do passado seria mentira);
+//      - os BUFFERS 0-47 do iCustom (consumidores como o IFM continuam
+//        recebendo o valor ao vivo — replay não pode contaminar quem lê daqui
+//        sem saber que este gráfico está em replay).
+int  gRK = 0;
+// Índice efetivo, sempre dentro das séries calculadas (defesa: as séries
+// encolhem quando o histórico é curto, e gRK persiste entre recálculos).
+int  RK()
+{
+   if(gRK<=0) return 0;
+   int mx=gLs-1; if(gLf-1<mx) mx=gLf-1;
+   if(mx<0) return 0;
+   return (gRK>mx)? mx : gRK;
+}
 int    gAge[8];       // idade do estado atual (barras)
 int    gPrevState[8];
 bool   gPrevInit=false;
@@ -450,7 +504,7 @@ int StateAt(int c,int k)
    double sdA=SerStd(gAcc, c,gLf,k,gZWin);
    double cxz=(sdC>0)? gConv[c*gLf+k]/sdC : 0.0;
    double acz=(sdA>0)? gAcc[c*gLf+k]/sdA : 0.0;
-   if(k==0) gAccZ0[c]=acz;
+   if(k==gRK) gAccZ0[c]=acz;   // v1.45: setas seguem a barra exibida (replay)
    double cx=cxz*dir, ac=acz*dir, pers=gPers[c*gLf+k];
 
    int st=ST_NOISE;
@@ -539,9 +593,10 @@ bool Compute()
          double t0=gTmid[c*gLf+k];
          gDirSer[c*gLs+k]=(t0>0?1:(t0<0?-1:0));
       }
-      // idade do estado atual
-      int st0=gStateSer[c*gLs+0], age=1;
-      for(int k=1;k<gLs;k++){ if(gStateSer[c*gLs+k]==st0) age++; else break; }
+      // idade do estado atual (v1.45: a partir da barra exibida, não do vivo)
+      int kA=gRK; if(kA>=gLs) kA=0;
+      int st0=gStateSer[c*gLs+kA], age=1;
+      for(int k=kA+1;k<gLs;k++){ if(gStateSer[c*gLs+k]==st0) age++; else break; }
       gAge[c]=age;
    }
    return true;
@@ -854,17 +909,32 @@ void SetBr(int c,int idx,double h,double s)   // v1.40: buffers 24-39
       case 6: BH6[idx]=h; BB6[idx]=s; break; case 7: BH7[idx]=h; BB7[idx]=s; break;
    }
 }
+void SetER(int c,int idx,double v)   // v1.44: buffers 40-47
+{
+   switch(c)
+   {
+      case 0: BE0[idx]=v; break; case 1: BE1[idx]=v; break;
+      case 2: BE2[idx]=v; break; case 3: BE3[idx]=v; break;
+      case 4: BE4[idx]=v; break; case 5: BE5[idx]=v; break;
+      case 6: BE6[idx]=v; break; case 7: BE7[idx]=v; break;
+   }
+}
 void FillBuffers(int total)
 {
    int lo=MathMax(0,total-2-InpBars);
    for(int c=0;c<8;c++)
    {
       for(int i=lo;i<total;i++)
-      { SetM(c,i,EMPTY_VALUE); SetSD(c,i,EMPTY_VALUE,EMPTY_VALUE); SetBr(c,i,EMPTY_VALUE,EMPTY_VALUE); }
+      { SetM(c,i,EMPTY_VALUE); SetSD(c,i,EMPTY_VALUE,EMPTY_VALUE); SetBr(c,i,EMPTY_VALUE,EMPTY_VALUE); SetER(c,i,EMPTY_VALUE); }
       for(int k=0;k<InpBars && k<gLs;k++)
       {
          int idx=total-2-k; if(idx<0) break;
+         // v1.45 REPLAY: k < RK() é o FUTURO em relação à barra exibida.
+         // Fica em EMPTY_VALUE (já zerado no laço acima) — a linha termina
+         // na barra do replay e o que vem depois não aparece na tela.
+         if(k<RK()) continue;
          SetM(c,idx,gM[c*gLf+k]);
+         SetER(c,idx,gER[c*gLf+k]);
          SetSD(c,idx,(double)gStateSer[c*gLs+k],(double)gDirSer[c*gLs+k]);
          if(gRelOk)
          {
@@ -873,10 +943,12 @@ void FillBuffers(int total)
          }
       }
       // barra em formação repete o último valor FECHADO (cabeçalho útil,
-      // linha sem gap, anti-repaint preservado)
-      if(total-1>=0 && gLs>0)
+      // linha sem gap, anti-repaint preservado). Em replay ela fica vazia:
+      // a barra viva é futuro.
+      if(total-1>=0 && gLs>0 && RK()==0)
       {
          SetM(c,total-1,gM[c*gLf+0]);
+         SetER(c,total-1,gER[c*gLf+0]);
          SetSD(c,total-1,(double)gStateSer[c*gLs+0],(double)gDirSer[c*gLs+0]);
          if(gRelOk)
          {
@@ -936,8 +1008,88 @@ void ApplyFocus()
       PlotIndexSetInteger(p,PLOT_LINE_WIDTH,hot?(f?3:2):1);
    }
 }
+//+------------------------------------------------------------------+
+//| v1.45 — REPLAY: botões, rótulo e marcador da barra no gráfico     |
+//+------------------------------------------------------------------+
+void RpBtn(int win,string nm,int x,int w,string txt,color bg,color fg)
+{
+   if(ObjectFind(0,nm)<0)
+   {
+      ObjectCreate(0,nm,OBJ_BUTTON,win,0,0);
+      ObjectSetInteger(0,nm,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+      ObjectSetInteger(0,nm,OBJPROP_YDISTANCE,4);
+      ObjectSetInteger(0,nm,OBJPROP_YSIZE,18);
+      ObjectSetString (0,nm,OBJPROP_FONT,"Consolas");
+      ObjectSetInteger(0,nm,OBJPROP_FONTSIZE,8);
+      ObjectSetInteger(0,nm,OBJPROP_SELECTABLE,false);
+   }
+   ObjectSetInteger(0,nm,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,nm,OBJPROP_XSIZE,w);
+   ObjectSetString (0,nm,OBJPROP_TEXT,txt);
+   ObjectSetInteger(0,nm,OBJPROP_BGCOLOR,bg);
+   ObjectSetInteger(0,nm,OBJPROP_COLOR,fg);
+   ObjectSetInteger(0,nm,OBJPROP_STATE,false);
+}
+
+void DrawReplay(int win)
+{
+   if(!InpReplay)
+   {
+      ObjectDelete(0,PFX+"rpVL");
+      return;
+   }
+   bool on=(RK()>0);
+   color bg = on ? C'170,110,20' : C'50,50,65';
+   RpBtn(win,PFX+"rpBB",190,30,"<<",bg,on?clrBlack:clrWhite);
+   RpBtn(win,PFX+"rpB" ,222,26,"<" ,bg,on?clrBlack:clrWhite);
+   RpBtn(win,PFX+"rpF" ,250,26,">" ,bg,on?clrBlack:clrWhite);
+   RpBtn(win,PFX+"rpFF",278,30,">>",bg,on?clrBlack:clrWhite);
+   RpBtn(win,PFX+"rpLv",310,86, on?"[ REPLAY ]":"[ AO VIVO ]",
+         on?clrOrangeRed:C'50,50,65', on?clrWhite:C'150,150,150');
+
+   // rótulo: barra e horário do candle que o painel está lendo
+   ENUM_TIMEFRAMES ctf=(ENUM_TIMEFRAMES)_Period;
+   datetime tb=iTime(_Symbol,ctf,RK()+1);
+   string info = on
+      ? StringFormat("  %d barras atras  %s  (painel congelado; alertas e buffers seguem AO VIVO)",
+                     RK(), TimeToString(tb,TIME_DATE|TIME_MINUTES))
+      : "";
+   Lbl(PFX+"rpInfo",win,402,13,info,on?clrOrange:C'60,60,66');
+
+   // marcador no gráfico
+   string vl=PFX+"rpVL";
+   if(on)
+   {
+      if(ObjectFind(0,vl)<0)
+      {
+         ObjectCreate(0,vl,OBJ_VLINE,0,0,0);
+         ObjectSetInteger(0,vl,OBJPROP_COLOR,clrOrange);
+         ObjectSetInteger(0,vl,OBJPROP_STYLE,STYLE_DOT);
+         ObjectSetInteger(0,vl,OBJPROP_BACK,true);
+         ObjectSetInteger(0,vl,OBJPROP_SELECTABLE,false);
+      }
+      ObjectSetInteger(0,vl,OBJPROP_TIME,tb);
+   }
+   else ObjectDelete(0,vl);
+}
+
+// Move o replay, reescreve os buffers (as LINHAS param na barra do replay)
+// e força o redesenho das duas abas.
+void RpStep(int d)
+{
+   int mx=gLs-1; if(gLf-1<mx) mx=gLf-1; if(mx<0) mx=0;
+   gRK+=d;
+   if(gRK<0)  gRK=0;
+   if(gRK>mx) gRK=mx;
+   int total=Bars(_Symbol,_Period);
+   if(total>0 && ArraySize(gM)>0) FillBuffers(total);
+   gMtxDirty=true;
+   ObjectsDeleteAll(0,PPFX);
+}
+
 void DrawBtn(int win)
 {
+   DrawReplay(win);
    string nm=PFX+"btnFocus";
    if(ObjectFind(0,nm)<0)
    {
@@ -1002,13 +1154,16 @@ void DrawEndLabels(int win)
 {
    if(!InpEndLabels) return;
    ENUM_TIMEFRAMES ctf=(ENUM_TIMEFRAMES)_Period;
-   datetime tEnd=iTime(_Symbol,ctf,0)+PeriodSeconds(ctf);
+   // v1.45: em replay os rótulos acompanham a ponta da linha (barra exibida),
+   // não a borda direita do gráfico — senão ficariam soltos no futuro.
+   datetime tEnd=(RK()>0) ? iTime(_Symbol,ctf,RK())
+                          : iTime(_Symbol,ctf,0)+PeriodSeconds(ctf);
    bool f=FocusActive();
 
    // anti-colisão: ordena por M desc e impõe separação mínima vertical
    int ord[8]; for(int i=0;i<8;i++) ord[i]=i;
    for(int i=0;i<7;i++) for(int j=i+1;j<8;j++)
-      if(gM[ord[j]*gLf+0]>gM[ord[i]*gLf+0]){ int t=ord[i]; ord[i]=ord[j]; ord[j]=t; }
+      if(gM[ord[j]*gLf+RK()]>gM[ord[i]*gLf+RK()]){ int t=ord[i]; ord[i]=ord[j]; ord[j]=t; }
 
    // separação mínima em unidades de preço: altura do texto em px -> preço
    int hpx=(int)ChartGetInteger(0,CHART_HEIGHT_IN_PIXELS,win);
@@ -1018,7 +1173,7 @@ void DrawEndLabels(int win)
    double ypos[8];
    for(int r=0;r<8;r++)
    {
-      double want=gM[ord[r]*gLf+0];
+      double want=gM[ord[r]*gLf+RK()];
       if(r>0 && ypos[r-1]-want<minSep) want=ypos[r-1]-minSep;
       ypos[r]=want;
    }
@@ -1027,7 +1182,7 @@ void DrawEndLabels(int win)
    {
       int c=ord[r];
       string nm=PFX+"end"+cur[c];
-      double v=gM[c*gLf+0];
+      double v=gM[c*gLf+RK()];
       bool hot=(!f || c==gFocA || c==gFocB);
       if(ObjectFind(0,nm)<0)
       {
@@ -1115,19 +1270,19 @@ void DrawPanel()
    // ranking por M
    int ord[8]; for(int i=0;i<8;i++) ord[i]=i;
    for(int i=0;i<7;i++) for(int j=i+1;j<8;j++)
-      if(gM[ord[j]*gLf+0]>gM[ord[i]*gLf+0]){ int t=ord[i]; ord[i]=ord[j]; ord[j]=t; }
+      if(gM[ord[j]*gLf+RK()]>gM[ord[i]*gLf+RK()]){ int t=ord[i]; ord[i]=ord[j]; ord[j]=t; }
 
    // maior |M| p/ escala das barras
    double mMax=0.05;
-   for(int c=0;c<8;c++) mMax=MathMax(mMax,MathAbs(gM[c*gLf+0]));
+   for(int c=0;c<8;c++) mMax=MathMax(mMax,MathAbs(gM[c*gLf+RK()]));
 
    for(int r=0;r<8;r++)
    {
       int c=ord[r];
       int yy=y+rh*(r+2);
-      double m=gM[c*gLf+0], t=gTmid[c*gLf+0], pe=gPers[c*gLf+0];
-      int st=gStateSer[c*gLs+0], dr=gDirSer[c*gLs+0];
-      bool spur=(rel && Spurious(c,0));
+      double m=gM[c*gLf+RK()], t=gTmid[c*gLf+RK()], pe=gPers[c*gLf+RK()];
+      int st=gStateSer[c*gLs+RK()], dr=gDirSer[c*gLs+RK()];
+      bool spur=(rel && Spurious(c,RK()));
 
       // v1.40: marcador de força espúria (índice ativo sem confirmação <3/7)
       if(rel)
@@ -1154,8 +1309,8 @@ void DrawPanel()
       // v1.40: coluna amp — hard como número principal, soft apagado
       if(rel)
       {
-         int hN=(int)MathRound(gBrHard[c*gLs+0]*7.0);
-         int sN=(int)MathRound(gBrSoft[c*gLs+0]*7.0);
+         int hN=(int)MathRound(gBrHard[c*gLs+RK()]*7.0);
+         int sN=(int)MathRound(gBrSoft[c*gLs+RK()]*7.0);
          color hc=(hN==0)? C'120,120,120' :
                   ((dr>0)? C'90,200,130' : C'230,120,105');
          Lbl(PPFX+"ah"+(string)r,win,x+colAmp,yy,
@@ -1172,7 +1327,7 @@ void DrawPanel()
       // v1.42: "er" entre pers e acc — número cru, SEM destaque no limiar
       // (hipótese exploratória; ver P2 em detector-g8/research/p2_er_prospectivo)
       string rest=InpShowER
-         ? StringFormat("%+6.1f %4.2f %4.2f  %s",t,pe,gER[c*gLf+0],Arr(gAccZ0[c]))
+         ? StringFormat("%+6.1f %4.2f %4.2f  %s",t,pe,gER[c*gLf+RK()],Arr(gAccZ0[c]))
          : StringFormat("%+6.1f %4.2f  %s",t,pe,Arr(gAccZ0[c]));
       Lbl(PPFX+"rx"+(string)r,win,x+colRest+12*chpx,yy,rest,C'205,205,210');
 
@@ -1272,7 +1427,7 @@ void DrawMatrix()
             Lbl(nl,win,gx+9,yy+1,"?",C'120,120,120');
             continue;
          }
-         double t=PairCellT(a,b,0);
+         double t=PairCellT(a,b,RK());
          int st=PairStateAbs(t);
          if(st==ST_NOISE)
          {
@@ -1291,7 +1446,7 @@ void DrawMatrix()
    // rodapé: líder por breadth_hard + decomposição de dominância (top-3)
    int lead=-1; double bh=-1.0;
    for(int c=0;c<8;c++)
-      if(gDirSer[c*gLs+0]!=0 && gBrHard[c*gLs+0]>bh){ bh=gBrHard[c*gLs+0]; lead=c; }
+      if(gDirSer[c*gLs+RK()]!=0 && gBrHard[c*gLs+RK()]>bh){ bh=gBrHard[c*gLs+RK()]; lead=c; }
    string foot="sem lider";
    if(lead>=0)
    {
@@ -1365,6 +1520,12 @@ int OnInit()
    SetIndexBuffer(34,BB2,INDICATOR_CALCULATIONS); SetIndexBuffer(35,BB3,INDICATOR_CALCULATIONS);
    SetIndexBuffer(36,BB4,INDICATOR_CALCULATIONS); SetIndexBuffer(37,BB5,INDICATOR_CALCULATIONS);
    SetIndexBuffer(38,BB6,INDICATOR_CALCULATIONS); SetIndexBuffer(39,BB7,INDICATOR_CALCULATIONS);
+
+   // v1.44: ER por moeda (40-47) — exportacao pura, nao entra em plot nem gate
+   SetIndexBuffer(40,BE0,INDICATOR_CALCULATIONS); SetIndexBuffer(41,BE1,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(42,BE2,INDICATOR_CALCULATIONS); SetIndexBuffer(43,BE3,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(44,BE4,INDICATOR_CALCULATIONS); SetIndexBuffer(45,BE5,INDICATOR_CALCULATIONS);
+   SetIndexBuffer(46,BE6,INDICATOR_CALCULATIONS); SetIndexBuffer(47,BE7,INDICATOR_CALCULATIONS);
 
    for(int p=0;p<8;p++)
    {
@@ -1588,11 +1749,12 @@ int OnCalculate(const int rates_total,const int prev_calculated,
    // cria o elemento novo como 0.0 a cada barra; sem isto o cabeçalho da
    // janela mostra 0.000 até o próximo recálculo)
    int last=rates_total-1;
-   if(last>=0 && gLs>0 && ArraySize(gM)>0)
+   if(last>=0 && gLs>0 && ArraySize(gM)>0 && RK()==0)   // v1.45: em replay a barra viva é futuro
    {
       for(int c=0;c<8;c++)
       {
          SetM(c,last,gM[c*gLf+0]);
+         if(ArraySize(gER)>0) SetER(c,last,gER[c*gLf+0]);
          SetSD(c,last,(double)gStateSer[c*gLs+0],(double)gDirSer[c*gLs+0]);
          if(gRelOk && ArraySize(gBrHard)>=8*gLs)   // v1.40: cópia cosmética
          {
@@ -1625,6 +1787,25 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
       ObjectSetInteger(0,PFX+"btnFocus",OBJPROP_STATE,false);
       ChartRedraw();
    }
+   // v1.45: REPLAY — anda pelo histórico. "<<" e "<" vão para TRÁS no tempo
+   // (gRK sobe); ">" e ">>" voltam para o presente; o botão do meio zera.
+   if(id==CHARTEVENT_OBJECT_CLICK && InpReplay && StringFind(sparam,PFX+"rp")==0)
+   {
+      if     (sparam==PFX+"rpBB") RpStep(+InpReplayStep);
+      else if(sparam==PFX+"rpB" ) RpStep(+1);
+      else if(sparam==PFX+"rpF" ) RpStep(-1);
+      else if(sparam==PFX+"rpFF") RpStep(-InpReplayStep);
+      else if(sparam==PFX+"rpLv") RpStep(-1000000);      // volta AO VIVO
+      else return;
+
+      int winR=ChartWindowFind();
+      if(winR>=0){ DrawBtn(winR); DrawEndLabels(winR); }
+      if(gMtx && RelActive()){ DrawMatrix(); gMtxDirty=false; }
+      else DrawPanel();
+      ChartRedraw();
+      return;
+   }
+
    // v1.40: alterna painel-normal <-> matriz (persiste como o FOCO)
    if(id==CHARTEVENT_OBJECT_CLICK && sparam==PFX+"btnMtx")
    {
