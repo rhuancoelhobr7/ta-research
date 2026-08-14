@@ -14,14 +14,43 @@
 //|   1) PAINEL POR MOEDA (default). Transpoe o painel classico:      |
 //|      8 linhas = 8 moedas, colunas =                              |
 //|        pos    | valor do CSS no TF das linhas (POSICAO da linha)  |
-//|        ang    | variacao de |V| em k barras fechadas (ANGULACAO)  |
+//|        ang    | V(t)-V(t-k): INCLINACAO da linha, COM sinal      |
+//|                 (corrigido na v2.46: ate aqui esta linha ainda    |
+//|                  descrevia a definicao PRE-v2.41, que era o       |
+//|                  d|V| — hoje isso e o que alimenta o ESTADO)      |
 //|        estado | EXPANSAO / EXAUSTAO / NEUTRA / FRAQUEZA          |
+//|                 (por MAGNITUDE: d|V| = |V(t)|-|V(t-k)|)          |
 //|        MTF    | seta da angulacao em H4, D1, W1, MN              |
-//|      Ordenado por |V| decrescente (a mais mobilizada no topo).    |
+//|      Ordem default: |V| decrescente (a mais mobilizada no topo);  |
+//|      InpOrdemPainel=OP_LINHAS ordena como as linhas da tela.      |
 //|      InpPainelModo=MP_TF volta ao painel classico de 5 TFs.       |
 //|   2) PREFIXOS de objeto trocados (CSS_ -> CSSPM_) para os dois    |
 //|      indicadores ficarem no MESMO grafico sem brigar.             |
 //|   Nada mais muda: calculo, buffers, linhas, matriz, replay.       |
+//|                                                                  |
+//|  v2.46 - k POR TIMEFRAME, independente. Ate aqui um unico InpPesoK  |
+//|    definia a janela da ANG e a das setas de TODOS os TFs — o que    |
+//|    obriga a mesma janela a servir para H4 e para MN1. Agora:        |
+//|      InpKAng  = k da coluna ANG                                     |
+//|      InpKTF1..InpKTF5 = k da seta de cada coluna de TF              |
+//|    0 em qualquer um = HERDA o InpPesoK, entao o default reproduz a   |
+//|    v2.45 exatamente (nenhum numero muda sem voce pedir).            |
+//|    Resolvido POR TF (KForTf), nao por indice de coluna: o painel    |
+//|    por moeda, o painel TF-maior e o export JSON do FM App herdam    |
+//|    o k certo sem mudar assinatura de funcao nenhuma.                |
+//|    Cabecalho marca com * quando algum TF foge do k da ANG, e a      |
+//|    legenda lista quais. LEITURA de tela — nao muda o calculo do     |
+//|    CSS, nem os buffers, nem o que o a13/a13b mediram.               |
+//|                                                                  |
+//|    + InpOrdemPainel: ordem das moedas no painel POR MOEDA.          |
+//|      OP_MOBILIZADA (default) = |V| decrescente, o historico — poe   |
+//|        a mais mobilizada no topo, e ai o topo e o fundo do grafico  |
+//|        acabam vizinhos na primeira linha.                           |
+//|      OP_LINHAS = V COM SINAL, forte -> fraca: a MESMA ordem das     |
+//|        linhas e dos rotulos de ponta na tela (e a mesma do painel   |
+//|        classico MP_TF, que sempre ordenou assim). Ler o painel de   |
+//|        cima para baixo passa a bater com o que o olho ve.           |
+//|      So a ordem das LINHAS DA TABELA muda; nenhum numero muda.      |
 //|                                                                  |
 //|  v2.44 - InpAngViva (default TRUE): ANG e ESTADO passam a ler da    |
 //|    barra EM FORMACAO, para bater com a linha que aparece na tela.   |
@@ -167,7 +196,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.45"
+#property version   "2.46"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -247,6 +276,15 @@ input bool   InpAlerts   = false; // alertas de cruzamento da box (ligue se quis
 // existir). Input no FIM: iCustom posicional de EAs antigos continua valido.
 enum EModoPainel { MP_TF=0, MP_MOEDA=1 };
 input EModoPainel InpPainelModo = MP_MOEDA; // painel: MOEDA-maior (novo) ou TF-maior
+
+// v2.46 - ordem das moedas no painel POR MOEDA. Input no FIM do bloco pelo
+// mesmo motivo do InpPainelModo (iCustom posicional de EAs antigos).
+enum EOrdemPainel
+{
+   OP_MOBILIZADA = 0,   // |V| decrescente: a mais mobilizada no topo
+   OP_LINHAS     = 1    // como as linhas: V com sinal, forte -> fraca
+};
+input EOrdemPainel InpOrdemPainel = OP_MOBILIZADA; // ordem das moedas no painel
 input int    InpFontPainel = 13;   // v2.37: fonte do painel por moeda (maior)
 input bool   InpNeon       = true; // v2.37: visual futurista (acento neon)
 // v2.44: ANG/ESTADO a partir da barra EM FORMACAO (bate com a linha que voce ve
@@ -255,6 +293,15 @@ input bool   InpAngViva    = true;  // ANG/ESTADO usam a barra viva (repinta)
 input double InpDiffThr  = 0.0;  // distancia minima de forca (regra de ouro)
 input bool   InpAddSunday= true; // somar candle de domingo na segunda
 input int    InpPesoK    = 3;    // k (barras fechadas do TF) p/ dpeso — pre-registro a13
+// v2.46: k por TF, independente. 0 em qualquer um destes = HERDA o InpPesoK,
+// entao o default reproduz a v2.45 exatamente. Servem so para leitura de tela:
+// TF lento com k pequeno da seta nervosa; TF rapido com k grande da seta lenta.
+input int    InpKAng     = 0;    // k da coluna ANG (0 = usa InpPesoK)
+input int    InpKTF1     = 0;    // k da seta do TF1 (H1)  — 0 = usa InpPesoK
+input int    InpKTF2     = 0;    // k da seta do TF2 (H4)  — 0 = usa InpPesoK
+input int    InpKTF3     = 0;    // k da seta do TF3 (D1)  — 0 = usa InpPesoK
+input int    InpKTF4     = 0;    // k da seta do TF4 (W1)  — 0 = usa InpPesoK
+input int    InpKTF5     = 0;    // k da seta do TF5 (MN1) — 0 = usa InpPesoK
 input bool   InpReplay    = true; // botao REPLAY (retroceder estado das linhas) — v2.34
 input int    InpReplayStep= 12;   // passo do replay << >> (em barras do grafico)
 
@@ -307,6 +354,38 @@ ENUM_TIMEFRAMES gTFList[9]={PERIOD_M1,PERIOD_M5,PERIOD_M15,PERIOD_M30,
 //+------------------------------------------------------------------+
 int CurIdx(string code){ for(int i=0;i<8;i++) if(cur[i]==code) return i; return -1; }
 ENUM_TIMEFRAMES Rtf(ENUM_TIMEFRAMES tf){ return (tf==PERIOD_CURRENT)?(ENUM_TIMEFRAMES)_Period:tf; }
+
+//+------------------------------------------------------------------+
+//| v2.46: k por TF. Resolve POR TIMEFRAME e nao por indice de coluna |
+//| — assim todo ponto que ja recebia um TF (painel por moeda, painel |
+//| TF-maior e o export JSON do FM App) herda o k certo sem mudar a   |
+//| assinatura de nada. 0 no input especifico = herda o InpPesoK.     |
+//+------------------------------------------------------------------+
+int KAng(){ return InpKAng>0 ? InpKAng : InpPesoK; }
+
+int KForTf(ENUM_TIMEFRAMES tf)
+{
+   ENUM_TIMEFRAMES t=Rtf(tf);
+   if(InpKTF1>0 && t==Rtf(InpTF1)) return InpKTF1;
+   if(InpKTF2>0 && t==Rtf(InpTF2)) return InpKTF2;
+   if(InpKTF3>0 && t==Rtf(InpTF3)) return InpKTF3;
+   if(InpKTF4>0 && t==Rtf(InpTF4)) return InpKTF4;
+   if(InpKTF5>0 && t==Rtf(InpTF5)) return InpKTF5;
+   return InpPesoK;
+}
+
+// true se algum k especifico foge do global (o cabecalho marca com *)
+bool KMisto()
+{
+   int a=KAng();
+   if(a!=InpPesoK) return true;
+   if(InpKTF1>0 && InpKTF1!=InpPesoK) return true;
+   if(InpKTF2>0 && InpKTF2!=InpPesoK) return true;
+   if(InpKTF3>0 && InpKTF3!=InpPesoK) return true;
+   if(InpKTF4>0 && InpKTF4!=InpPesoK) return true;
+   if(InpKTF5>0 && InpKTF5!=InpPesoK) return true;
+   return false;
+}
 string TfStr(ENUM_TIMEFRAMES tf){ string s=EnumToString(Rtf(tf)); StringReplace(s,"PERIOD_",""); return s; }
 double Clamp(double v,double lo,double hi){ return (v<lo?lo:(v>hi?hi:v)); }
 
@@ -592,7 +671,7 @@ bool PhaseDir(ENUM_TIMEFRAMES tf, int &dir[])
 {
    double Vn[8], Vp[8];
    int g1=ComputeAt(tf,1,Vn);                 // ultima barra fechada
-   int g2=ComputeAt(tf,1+InpPesoK,Vp);        // k barras fechadas atras
+   int g2=ComputeAt(tf,1+KForTf(tf),Vp);      // k barras fechadas atras (v2.46: k do TF)
    if(g1<1 || g2<1){ for(int c=0;c<8;c++) dir[c]=0; return false; }
    for(int c=0;c<8;c++)
    {
@@ -1045,7 +1124,7 @@ void DrawPanelMoeda()
    int sh = InpAngViva ? 0 : 1;
    double Vn[8], Vp[8];
    int g1=ComputeAtRaw(gLineTF,sh,Vn);
-   int g2=ComputeAtRaw(gLineTF,sh+InpPesoK,Vp);
+   int g2=ComputeAtRaw(gLineTF,sh+KAng(),Vp);     // v2.46: k proprio da coluna ANG
    if(g1<1 || g2<1) return;
    double lim=InpScaleMax-0.02;      // onde a LINHA satura
 
@@ -1061,7 +1140,8 @@ void DrawPanelMoeda()
    for(int j=0;j<4;j++)
    {
       double A[8], B[8];
-      int ga=ComputeAtRaw(mtf[j],sh,A), gb=ComputeAtRaw(mtf[j],sh+InpPesoK,B);
+      // v2.46: cada coluna de TF usa o SEU k
+      int ga=ComputeAtRaw(mtf[j],sh,A), gb=ComputeAtRaw(mtf[j],sh+KForTf(mtf[j]),B);
       for(int c=0;c<8;c++)
       {
          double d=(ga<1||gb<1)? 0.0 : (A[c]-B[c]);   // v2.41: inclinacao, com sinal
@@ -1069,9 +1149,19 @@ void DrawPanelMoeda()
       }
    }
 
+   // v2.46: ordem do painel. MOBILIZADA (default, comportamento historico) poe a
+   // maior |V| no topo — o topo e o fundo do grafico se encontram na primeira
+   // linha. LINHAS ordena por V COM SINAL, que e a ordem em que as linhas e os
+   // rotulos de ponta aparecem na tela (e a mesma do painel classico MP_TF),
+   // entao a leitura de cima para baixo bate com o que o olho ve no grafico.
    int ord[8]; for(int i=0;i<8;i++) ord[i]=i;
    for(int i=0;i<7;i++) for(int j2=i+1;j2<8;j2++)
-      if(MathAbs(Vn[ord[j2]])>MathAbs(Vn[ord[i]])){ int t=ord[i]; ord[i]=ord[j2]; ord[j2]=t; }
+   {
+      bool troca = (InpOrdemPainel==OP_LINHAS)
+                   ? (Vn[ord[j2]] > Vn[ord[i]])
+                   : (MathAbs(Vn[ord[j2]]) > MathAbs(Vn[ord[i]]));
+      if(troca){ int t=ord[i]; ord[i]=ord[j2]; ord[j2]=t; }
+   }
 
    color BG      = InpNeon ? C'10,12,18'   : C'24,24,32';
    color BORDA   = InpNeon ? C'0,200,225'  : C'80,80,90';
@@ -1109,8 +1199,9 @@ void DrawPanelMoeda()
    // v2.45: a info do modo vai para a ESQUERDA, logo apos o titulo. Antes
    // disputava a mesma ponta com o botao TODAS e encostava nele.
    LblF(PPFX+"hd2",win,x+pad+20*chpx,y+8,
-        StringFormat("%s box%.2f k%d %s",TfStr(gLineTF),InpBox,InpPesoK,
-                     InpAngViva?"vivo":"fech"),
+        // v2.46: o k mostrado e o da coluna ANG; * avisa que algum TF usa outro
+        StringFormat("%s box%.2f k%d%s %s",TfStr(gLineTF),InpBox,KAng(),
+                     KMisto()?"*":"", InpAngViva?"vivo":"fech"),
         InpAngViva?C'255,205,80':TXT_DIM,fs-2);
 
    // v2.39: TODAS foi para a BARRA DE TITULO (antes colidia com o cabecalho FORCA)
@@ -1199,10 +1290,21 @@ void DrawPanelMoeda()
            solo?C'0,150,175':C'24,29,40', off?C'80,86,96':colArr[c], fs-1);
    }
 
+   // v2.46: com k por TF, a legenda lista os que fogem do k da ANG
+   string kmix="";
+   if(KMisto())
+   {
+      ENUM_TIMEFRAMES kt[4]; kt[0]=InpTF2; kt[1]=InpTF3; kt[2]=InpTF4; kt[3]=InpTF5;
+      for(int kj=0;kj<4;kj++)
+         if(KForTf(kt[kj])!=KAng())
+            kmix+=StringFormat("  %s:%d",TfStr(Rtf(kt[kj])),KForTf(kt[kj]));
+      if(kmix!="") kmix="  (setas"+kmix+")";
+   }
    LblF(PPFX+"lg",win,x+pad,y0+rh*8+3,
-        StringFormat("ANG: %d barras",InpPesoK)+
+        StringFormat("ANG: %d barras",KAng())+kmix+
         (InpAngViva? " ate a viva (repinta)" : " fechadas")+
         (InpAngViva? "" : "  "+ShortToString(0x25B2)+ShortToString(0x25BC)+"=virou")+
+        (InpOrdemPainel==OP_LINHAS? "   ordem=linhas" : "")+
         "   * = no teto   leitura, nao sinal",
         TXT_DIM,fs-4);
 }
