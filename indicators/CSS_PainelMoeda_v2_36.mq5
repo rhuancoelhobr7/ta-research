@@ -28,6 +28,34 @@
 //|      indicadores ficarem no MESMO grafico sem brigar.             |
 //|   Nada mais muda: calculo, buffers, linhas, matriz, replay.       |
 //|                                                                  |
+//|  v2.49 - COMPLETA o conserto da v2.47/v2.48 atacando a CAUSA.       |
+//|    A v2.47 corrigiu o divisor no painel e a v2.48 nas linhas, mas   |
+//|    em MN1 as duas telas continuavam discordando — e o motivo nao    |
+//|    era o divisor: PairSlopes e TUDO-OU-NADA. Se o par nao tem       |
+//|    kbars + 141 barras ele cai fora INTEIRO. Com InpBars=300 a linha |
+//|    pedia 441 barras (~37 anos) e so 4 dos 28 pares entravam; o      |
+//|    painel pede need=1 (142 barras) e os 28 entram. Eram CONJUNTOS   |
+//|    DE PARES DIFERENTES — o CHF da linha saia de 1 par, o do painel  |
+//|    de 7. Nenhum divisor faz esses dois numeros baterem.             |
+//|    Conserto: a linha nao pede mais fundo do que o par MAIS CURTO    |
+//|    aguenta (gKbarsEf). Medido nesta corretora: M15..W1 tem viavel   |
+//|    693..5859, entao usam 300 e NADA muda; MN1 cai para ~54 barras   |
+//|    (4,5 anos) e passa a ter 28/28 — as duas telas voltam a falar do |
+//|    mesmo objeto. Confirmado na tela: os 8 valores batem.            |
+//|    + Sem cobertura na barra = EMPTY_VALUE, a linha SOME ali. Antes  |
+//|      virava 0.0, e um zero desenhado se le como "moeda neutra" —    |
+//|      uma afirmacao, nao a ausencia dela.                            |
+//|    + Cabecalho mostra a profundidade real quando capou ("54b"),     |
+//|      senao a linha curta pareceria bug de plot.                     |
+//|                                                                  |
+//|  v2.48 - o mesmo conserto do divisor nos QUATRO consumidores da     |
+//|    serie das linhas, que a v2.47 nao tinha tocado: Fill (as 8       |
+//|    linhas), FillPar (modo single), FillDpeso (buffers 10-17 do      |
+//|    iCustom) e o export SE_ (o JSON do FM App). Todos normalizavam   |
+//|    com NormVal/cnt[] cheio. Aqui a cobertura e POR BARRA (array NS  |
+//|    junto do S): um par pode ter slope valido em algumas barras e    |
+//|    EMPTY em outras, entao o divisor certo muda de barra para barra. |
+//|                                                                  |
 //|  v2.47 - BUG: valor DILUIDO em silencio quando falta historico.     |
 //|    Sintoma (achado em MN1): as linhas mostravam GBP/CAD/AUD/NZD em  |
 //|    exatamente +0.00 e as demais encolhidas, enquanto o painel dava  |
@@ -221,7 +249,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.47"
+#property version   "2.49"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -349,6 +377,7 @@ int    cnt[8];
 // DISPONIVEIS, fixada no OnInit; este e a de pares com historico suficiente
 // naquela chamada. Em TF longo (MN1) os dois divergem muito.
 int    gCov[8];
+int    gKbarsEf = 0;   // v2.49: profundidade que a linha REALMENTE usou
 bool   gReady = false;
 string PFX = "CSSPM_";
 // v2.33: grupos de objetos alternaveis (mesma infra do CSSM v1.40).
@@ -747,7 +776,7 @@ int ColorState(double v, double vPrev)
    else               return (v < vPrev) ? 5 : 4;
 }
 
-void Fill(double &buf[],int c,int kbars,int total,const double &S[])
+void Fill(double &buf[],int c,int kbars,int total,const double &S[],const int &NS[])
 {
    // Limpa o buffer da moeda
    for(int idx=0;idx<total;idx++) buf[idx]=EMPTY_VALUE;
@@ -763,12 +792,18 @@ void Fill(double &buf[],int c,int kbars,int total,const double &S[])
    for(int k=0;k<kbars;k++)
    {
       int idx=total-1-gReplayBars-k; if(idx<0) break;
-      buf[idx]=NormVal(c,S[c*kbars+k]);   // v2.35: media + escala + clamp
+      // v2.49: SEM cobertura naquela barra = sem dado. Deixa EMPTY_VALUE
+      // (a linha some ali) em vez de escrever 0.0 — um zero desenhado se le
+      // como "moeda neutra", que e uma afirmacao, nao a ausencia dela.
+      if(NS[c*kbars+k]<=0) continue;
+      // v2.48: divide pelos pares que entraram NAQUELA barra. Com cobertura
+      // cheia é idêntico ao NormVal antigo.
+      buf[idx]=NormValN(c,S[c*kbars+k],NS[c*kbars+k]);
    }
 }
 
 // Preenche o plot dedicado do PAR (modo single)
-void FillPar(int kbars,int total,const double &S[])
+void FillPar(int kbars,int total,const double &S[],const int &NS[])
 {
    for(int idx=0;idx<total;idx++){ Bpar[idx]=EMPTY_VALUE; ColPar[idx]=0; }
    if(!gSingle) return;
@@ -782,8 +817,8 @@ void FillPar(int kbars,int total,const double &S[])
    for(int k=kbars-1;k>=0;k--)
    {
       int idx=total-1-gReplayBars-k; if(idx<0) continue;  // v2.34: offset replay
-      double vb=NormVal(iBase ,S[iBase *kbars+k]);
-      double vq=NormVal(iQuote,S[iQuote*kbars+k]);
+      double vb=NormValN(iBase ,S[iBase *kbars+k],NS[iBase *kbars+k]);   // v2.48
+      double vq=NormValN(iQuote,S[iQuote*kbars+k],NS[iQuote*kbars+k]);
       double val=Clamp(vb-vq,-(InpScaleMax-0.02),(InpScaleMax-0.02));
       Bpar[idx]=val;
       ColPar[idx]=ColorState(val, first?val:prevVal);
@@ -793,7 +828,7 @@ void FillPar(int kbars,int total,const double &S[])
 // v2.30: preenche os buffers 10..17 com dpeso = |val_t| - |val_{t-k}|
 // no TF das linhas. A barra 0 (em formacao) tambem recebe valor — por
 // isso consumidores via iCustom DEVEM ler com shift>=1 (documentado).
-void FillDpeso(int kbars,int total,const double &S[])
+void FillDpeso(int kbars,int total,const double &S[],const int &NS[])
 {
    for(int idx=0;idx<total;idx++)
    { D0[idx]=EMPTY_VALUE; D1s[idx]=EMPTY_VALUE; D2[idx]=EMPTY_VALUE;
@@ -805,8 +840,9 @@ void FillDpeso(int kbars,int total,const double &S[])
       {
          int idx=total-1-gReplayBars-k; if(idx<0) break;  // v2.34: offset replay
          double v=EMPTY_VALUE;
-         if(cnt[c]>0 && k+InpPesoK<kbars)
-            v=MathAbs(NormVal(c,S[c*kbars+k]))-MathAbs(NormVal(c,S[c*kbars+k+InpPesoK]));
+         if(cnt[c]>0 && k+InpPesoK<kbars)   // v2.48: cobertura por barra
+            v=MathAbs(NormValN(c,S[c*kbars+k],NS[c*kbars+k]))
+             -MathAbs(NormValN(c,S[c*kbars+k+InpPesoK],NS[c*kbars+k+InpPesoK]));
          switch(c)
          {
             case 0: D0[idx]=v;  break; case 1: D1s[idx]=v; break;
@@ -822,10 +858,37 @@ bool ComputeSeries()
 {
    int total=ArraySize(B0);
    if(total<InpMAPeriod+InpATRPeriod+16 || gPairsN<1) return false;
-   int kbars=MathMin(InpBars,total-2);
-   double S[]; ArrayResize(S,8*kbars); ArrayInitialize(S,0);
-   int good=0;
    ENUM_TIMEFRAMES tf=gLineTF;   // v2.34: TF mutavel (botoes TF- / TF+)
+
+   // v2.49: PROFUNDIDADE VIAVEL. O PairSlopes e tudo-ou-nada: se o par nao
+   // tem kbars + folga barras, ele cai fora INTEIRO. Pedindo InpBars=300 em
+   // MN1 (300+141 = 441 barras, ~37 anos) so 4 dos 28 pares entram — e a
+   // linha passa a ser calculada sobre um subconjunto diferente do que o
+   // painel usa (o painel pede need=1, e os 28 entram). Dai as duas telas
+   // nunca concordarem, por mais honesto que seja o divisor.
+   // Entao a linha nao pede mais fundo do que o par MAIS CURTO aguenta.
+   // Medido nesta corretora: M15..W1 ja cabem 300 (viavel 693..5859) e nada
+   // muda; MN1 cai para ~54 barras (4,5 anos) e passa a ter 28/28.
+   int folga = 12 + InpATRPeriod + (int)MathMax(InpMAPeriod,21) + 8;
+   int viavel = InpBars;
+   for(int pv=0;pv<gPairsN;pv++)
+   {
+      int disp = Bars(gPair[pv], tf);
+      if(disp <= 0) continue;               // historico ainda baixando: ignora
+      int cabe = disp - folga;
+      if(cabe < viavel) viavel = cabe;
+   }
+   if(viavel < 8) viavel = 8;               // piso: sempre desenha alguma coisa
+
+   int kbars=MathMin(MathMin(InpBars,total-2),viavel);
+   gKbarsEf = kbars;                        // p/ o cabecalho avisar quando capou
+   double S[]; ArrayResize(S,8*kbars); ArrayInitialize(S,0);
+   // v2.48: cobertura POR BARRA. Aqui ela não pode ser por chamada como no
+   // ComputeAt: um par pode ter slope válido em algumas barras e EMPTY em
+   // outras (histórico que começa no meio da janela), então o divisor certo
+   // muda de barra para barra.
+   int NS[]; ArrayResize(NS,8*kbars); ArrayInitialize(NS,0);
+   int good=0;
 
    // v2.35: a serie inteira sai do mesmo nucleo que o painel e a matriz.
    // A ancora temporal (backtest/REPLAY) vive dentro de PairSlopes, entao
@@ -839,15 +902,16 @@ bool ComputeSeries()
       for(int k=0;k<kbars;k++)
       {
          if(sl[k]==EMPTY_VALUE) continue;
-         S[bi*kbars+k]+=sl[k]; S[qi*kbars+k]-=sl[k];
+         S[bi*kbars+k]+=sl[k]; NS[bi*kbars+k]++;
+         S[qi*kbars+k]-=sl[k]; NS[qi*kbars+k]++;
       }
    }
-   Fill(B0,0,kbars,total,S); Fill(B1,1,kbars,total,S);
-   Fill(B2,2,kbars,total,S); Fill(B3,3,kbars,total,S);
-   Fill(B4,4,kbars,total,S); Fill(B5,5,kbars,total,S);
-   Fill(B6,6,kbars,total,S); Fill(B7,7,kbars,total,S);
-   FillPar(kbars,total,S);
-   FillDpeso(kbars,total,S);
+   Fill(B0,0,kbars,total,S,NS); Fill(B1,1,kbars,total,S,NS);
+   Fill(B2,2,kbars,total,S,NS); Fill(B3,3,kbars,total,S,NS);
+   Fill(B4,4,kbars,total,S,NS); Fill(B5,5,kbars,total,S,NS);
+   Fill(B6,6,kbars,total,S,NS); Fill(B7,7,kbars,total,S,NS);
+   FillPar(kbars,total,S,NS);
+   FillDpeso(kbars,total,S,NS);
    return (good>=MathMax(1,gPairsN/2));
 }
 //+------------------------------------------------------------------+
@@ -1250,8 +1314,12 @@ void DrawPanelMoeda()
    // disputava a mesma ponta com o botao TODAS e encostava nele.
    LblF(PPFX+"hd2",win,x+pad+20*chpx,y+8,
         // v2.46: o k mostrado e o da coluna ANG; * avisa que algum TF usa outro
-        StringFormat("%s box%.2f k%d%s %s",TfStr(gLineTF),InpBox,KAng(),
-                     KMisto()?"*":"", InpAngViva?"vivo":"fech"),
+        // v2.49: quando a linha teve de encurtar por falta de historico, diz
+        // quantas barras ela realmente usou — senao parece bug de plot.
+        StringFormat("%s box%.2f k%d%s %s%s",TfStr(gLineTF),InpBox,KAng(),
+                     KMisto()?"*":"", InpAngViva?"vivo":"fech",
+                     (gKbarsEf>0 && gKbarsEf<InpBars)
+                        ? StringFormat(" %db",gKbarsEf) : ""),
         InpAngViva?C'255,205,80':TXT_DIM,fs-2);
 
    // v2.39: TODAS foi para a BARRA DE TITULO (antes colidia com o cabecalho FORCA)
@@ -1767,6 +1835,7 @@ int SE_ComputeSeries(ENUM_TIMEFRAMES tf, double &out[], long &tt[])
    ArrayResize(out, 8*N); ArrayInitialize(out, 0.0);
    ArrayResize(tt, N);    ArrayInitialize(tt, 0);
    double acc[]; ArrayResize(acc, 8*N); ArrayInitialize(acc, 0.0);
+   int nacc[]; ArrayResize(nacc, 8*N); ArrayInitialize(nacc, 0);   // v2.48: cobertura
 
    ENUM_TIMEFRAMES rtf=Rtf(tf);
    int pad=SunPad(rtf);
@@ -1830,13 +1899,15 @@ int SE_ComputeSeries(ENUM_TIMEFRAMES tf, double &out[], long &tt[])
          else { dblTma = ma[kk]; dblPrev = ma[kk+1]; }
          double v=(dblTma-dblPrev)/a;
          int j=N-1-idx;
-         acc[gBaseIdx[p]*N+j]  += v;
-         acc[gQuoteIdx[p]*N+j] -= v;
+         acc[gBaseIdx[p]*N+j]  += v;   nacc[gBaseIdx[p]*N+j]++;
+         acc[gQuoteIdx[p]*N+j] -= v;   nacc[gQuoteIdx[p]*N+j]++;
       }
    }
    for(int c=0;c<8;c++)
       for(int j=0;j<N;j++)
-         out[c*N+j]=NormVal(c, acc[c*N+j]);   // mesma agregacao/escala do ComputeAt
+         // v2.48: mesma agregacao/escala do ComputeAt — inclusive o divisor,
+         // que agora e a cobertura real daquela barra.
+         out[c*N+j]=NormValN(c, acc[c*N+j], nacc[c*N+j]);
 
    int k0t = InpExportLive ? 0 : 1;
    for(int k=k0t;k<k0t+N;k++) if(k<ntg) tt[N-1-(k-k0t)]=(long)tgrid[k];
