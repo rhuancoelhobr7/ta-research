@@ -28,6 +28,31 @@
 //|      indicadores ficarem no MESMO grafico sem brigar.             |
 //|   Nada mais muda: calculo, buffers, linhas, matriz, replay.       |
 //|                                                                  |
+//|  v2.47 - BUG: valor DILUIDO em silencio quando falta historico.     |
+//|    Sintoma (achado em MN1): as linhas mostravam GBP/CAD/AUD/NZD em  |
+//|    exatamente +0.00 e as demais encolhidas, enquanto o painel dava  |
+//|    outro numero para as MESMAS moedas.                              |
+//|    Causa, em duas partes:                                           |
+//|      1) PairSlopes exige need + 12 + ATR(100) + MA(21) + 8 barras   |
+//|         POR PAR. Com InpBars=300 isso da 441 barras — em MN1, ~37   |
+//|         anos. So 4 dos 28 pares tem isso; o painel (need=1) precisa |
+//|         de 142 e passa com os 28. Dai a discordancia.               |
+//|      2) O PIOR: o par descartado saia da soma mas o divisor         |
+//|         continuava sendo cnt[] — a contagem de pares DISPONIVEIS,   |
+//|         fixada no OnInit. JPY apurado em 1 par era dividido por 7.  |
+//|         O numero nao ficava vazio: ficava plausivel e errado,       |
+//|         sempre puxado na direcao do ZERO.                           |
+//|    Conserto: ComputeAt/ComputeAtRaw contam a cobertura REAL (ncov)  |
+//|    e dividem por ela. O Cssm.mq5 sempre fez assim (cnt local la).   |
+//|    PARIDADE: com cobertura cheia, acc/ncov E acc/cnt — a mesma      |
+//|    expressao. Conferido par a par: M5..W1 tem 28/28 nas linhas e no |
+//|    painel, entao NADA muda neles; so o MN1 muda, que e onde estava  |
+//|    errado.                                                          |
+//|    Aviso na tela: cobertura parcial poe "!" no POS (reusa o slot do |
+//|    "*", que nao coexiste) em cor ambar, e a legenda diz quantos     |
+//|    pares entraram por moeda. NormVal antigo vira wrapper de         |
+//|    NormValN com a contagem cheia — o caminho do dpeso nao muda.     |
+//|                                                                  |
 //|  v2.46 - k POR TIMEFRAME, independente. Ate aqui um unico InpPesoK  |
 //|    definia a janela da ANG e a das setas de TODOS os TFs — o que    |
 //|    obriga a mesma janela a servir para H4 e para MN1. Agora:        |
@@ -196,7 +221,7 @@
 //|   OBS: o slope "anti-lag" original e proprietario; aqui e padrao.|
 //+------------------------------------------------------------------+
 #property copyright "Estudo - Camada 2 (forca de moeda)"
-#property version   "2.46"
+#property version   "2.47"
 #property description "v2.35: calculo = formula ORIGINAL do CSS (LWMA 21 + ATR 100 estilo MT4) + REPLAY + MATRIZ 8x8"
 #property indicator_separate_window
 #property indicator_buffers 18
@@ -319,6 +344,11 @@ string gPair[];
 int    gBaseIdx[], gQuoteIdx[];
 int    gPairsN = 0;
 int    cnt[8];
+// v2.47: quantos pares REALMENTE entraram na conta do ultimo ComputeAt/
+// ComputeAtRaw. Nao e igual ao cnt[]: o cnt e a contagem de pares
+// DISPONIVEIS, fixada no OnInit; este e a de pares com historico suficiente
+// naquela chamada. Em TF longo (MN1) os dois divergem muito.
+int    gCov[8];
 bool   gReady = false;
 string PFX = "CSSPM_";
 // v2.33: grupos de objetos alternaveis (mesma infra do CSSM v1.40).
@@ -460,10 +490,18 @@ int SunPad(ENUM_TIMEFRAMES tf)
 //| Media pelas ocorrencias (como o original), depois escala e clamp |
 //| p/ caber na janela +/-InpScaleMax. Unico ponto onde a escala e   |
 //| aplicada — painel, linhas, matriz e dpeso passam todos por aqui. |
+double NormValN(int c, double acc, int n)
+{
+   if(c<0 || c>7 || n<=0) return 0.0;
+   return Clamp((acc/n)*InpScale,-(InpScaleMax-0.02),(InpScaleMax-0.02));
+}
+// Compat: quem nao sabe a cobertura da chamada continua usando a contagem
+// cheia (o dpeso, que opera sobre uma serie ja agregada). Quando todos os
+// pares entram, NormValN(c,acc,cnt[c]) E NormVal(c,acc) — mesma expressao.
 double NormVal(int c, double acc)
 {
    if(c<0 || c>7 || cnt[c]<=0) return 0.0;
-   return Clamp((acc/cnt[c])*InpScale,-(InpScaleMax-0.02),(InpScaleMax-0.02));
+   return NormValN(c,acc,cnt[c]);
 }
 //+------------------------------------------------------------------+
 //| calcTma — replica EXATA da TMA do CSS original (Paul Gernard).   |
@@ -601,17 +639,20 @@ bool PairSlopes(string sym, ENUM_TIMEFRAMES tf, int need, double &slope[])
 int ComputeAt(ENUM_TIMEFRAMES tf, int kShift, double &out[])
 {
    double acc[8]; ArrayInitialize(acc,0);
+   int ncov[8]; ArrayInitialize(ncov,0);      // v2.47: cobertura REAL
    int good=0;
    for(int p=0;p<gPairsN;p++)
    {
       double sl[];
       if(!PairSlopes(gPair[p],tf,kShift+1,sl)) continue;
       if(sl[kShift]==EMPTY_VALUE) continue;
-      acc[gBaseIdx[p]]  += sl[kShift];   // moeda base:  + slope
-      acc[gQuoteIdx[p]] -= sl[kShift];   // moeda quote: - slope
+      acc[gBaseIdx[p]]  += sl[kShift];   ncov[gBaseIdx[p]]++;   // base:  + slope
+      acc[gQuoteIdx[p]] -= sl[kShift];   ncov[gQuoteIdx[p]]++;  // quote: - slope
       good++;
    }
-   for(int c=0;c<8;c++) out[c]=NormVal(c,acc[c]);
+   // v2.47: divide pelos pares que ENTRARAM, nao pelos disponiveis. Com
+   // cobertura cheia isto e identico ao NormVal antigo.
+   for(int c=0;c<8;c++){ gCov[c]=ncov[c]; out[c]=NormValN(c,acc[c],ncov[c]); }
    return good;
 }
 int ComputeNow(ENUM_TIMEFRAMES tf, double &out[]) { return ComputeAt(tf,0,out); }
@@ -624,18 +665,23 @@ int ComputeNow(ENUM_TIMEFRAMES tf, double &out[]) { return ComputeAt(tf,0,out); 
 int ComputeAtRaw(ENUM_TIMEFRAMES tf, int kShift, double &out[])
 {
    double acc[8]; ArrayInitialize(acc,0);
+   int ncov[8]; ArrayInitialize(ncov,0);      // v2.47: cobertura REAL
    int good=0;
    for(int p=0;p<gPairsN;p++)
    {
       double sl[];
       if(!PairSlopes(gPair[p],tf,kShift+1,sl)) continue;
       if(sl[kShift]==EMPTY_VALUE) continue;
-      acc[gBaseIdx[p]]  += sl[kShift];
-      acc[gQuoteIdx[p]] -= sl[kShift];
+      acc[gBaseIdx[p]]  += sl[kShift];   ncov[gBaseIdx[p]]++;
+      acc[gQuoteIdx[p]] -= sl[kShift];   ncov[gQuoteIdx[p]]++;
       good++;
    }
+   // v2.47: divide pelos pares que ENTRARAM, nao pelos disponiveis.
    for(int c=0;c<8;c++)
-      out[c] = (cnt[c]>0)? (acc[c]/cnt[c])*InpScale : 0.0;
+   {
+      gCov[c] = ncov[c];
+      out[c]  = (ncov[c]>0)? (acc[c]/ncov[c])*InpScale : 0.0;
+   }
    return good;
 }
 //+------------------------------------------------------------------+
@@ -1124,6 +1170,10 @@ void DrawPanelMoeda()
    int sh = InpAngViva ? 0 : 1;
    double Vn[8], Vp[8];
    int g1=ComputeAtRaw(gLineTF,sh,Vn);
+   // v2.47: guarda a cobertura DESTA chamada antes que as proximas a
+   // sobrescrevam (o gCov e do ultimo Compute*, e ainda vem o k da ANG e os
+   // quatro TFs da grade).
+   int covL[8]; for(int c0=0;c0<8;c0++) covL[c0]=gCov[c0];
    int g2=ComputeAtRaw(gLineTF,sh+KAng(),Vp);     // v2.46: k proprio da coluna ANG
    if(g1<1 || g2<1) return;
    double lim=InpScaleMax-0.02;      // onde a LINHA satura
@@ -1261,8 +1311,14 @@ void DrawPanelMoeda()
       Rect(PPFX+"chip"+(string)r,win,x+xEst-4,yy+4,wEst,rh-9,
            off?C'40,44,52':cEstado, off?C'40,44,52':cEstado,6);
 
+      // v2.47: cobertura parcial ganha "!" e cor de aviso. Reusa o slot do "*"
+      // (saturar e ser apurado em poucos pares nao acontecem juntos na pratica),
+      // entao a largura da coluna nao muda.
+      bool parcial = (covL[c] > 0 && covL[c] < cnt[c]);
+      string marca = sat ? "*" : (parcial ? "!" : "");
+      color corPos = off ? C'80,86,96' : (parcial ? C'230,170,60' : TXT);
       LblF(PPFX+"po"+(string)r,win,x+xPos,yy+6,
-           StringFormat("%+6.2f%s",v,sat?"*":""), off?C'80,86,96':TXT,fs-1);
+           StringFormat("%+6.2f%s",v,marca), corPos,fs-1);
       double d1 = (g3>=1)? (Vn[c]-V1b[c]) : 0.0;      // ultima barra fechada
       bool virou = (g3>=1) && (dV*d1 < 0);            // ultima barra contra o k
       LblF(PPFX+"an"+(string)r,win,x+xAng,yy+6,StringFormat("%+6.2f",dV),
@@ -1290,6 +1346,15 @@ void DrawPanelMoeda()
            solo?C'0,150,175':C'24,29,40', off?C'80,86,96':colArr[c], fs-1);
    }
 
+   // v2.47: se alguma moeda foi apurada com menos pares que o disponivel,
+   // a legenda diz QUANTOS — um valor de 1 de 7 pares nao merece a mesma
+   // confianca que um de 7 de 7, e antes disso ele saia diluido em silencio.
+   string cobertura="";
+   for(int cv=0;cv<8;cv++)
+      if(covL[cv]>0 && covL[cv]<cnt[cv])
+         cobertura+=StringFormat("  %s %d/%d",cur[cv],covL[cv],cnt[cv]);
+   if(cobertura!="") cobertura="   ! apurado em"+cobertura;
+
    // v2.46: com k por TF, a legenda lista os que fogem do k da ANG
    string kmix="";
    if(KMisto())
@@ -1305,6 +1370,7 @@ void DrawPanelMoeda()
         (InpAngViva? " ate a viva (repinta)" : " fechadas")+
         (InpAngViva? "" : "  "+ShortToString(0x25B2)+ShortToString(0x25BC)+"=virou")+
         (InpOrdemPainel==OP_LINHAS? "   ordem=linhas" : "")+
+        cobertura+
         "   * = no teto   leitura, nao sinal",
         TXT_DIM,fs-4);
 }
